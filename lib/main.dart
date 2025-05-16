@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:notepad/Provider/WebSocketProvider.dart';
+import 'package:notepad/core/ws_dispatcher.dart';
+import 'package:notepad/models/ws_message.dart';
+import 'package:notepad/provider/chat_provider.dart';
+import 'package:notepad/provider/websocket_provider.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  runApp(
-    ChangeNotifierProvider(
-      create:
-          (_) => WebSocketProvider(url: 'ws://127.0.0.1:8081/chat')..connect(),
-      child: const MyApp(),
-    ),
+  // 注册模型
+  WsMessageDispatcher.register<ChatMessage>(
+    type: 'chat',
+    parser: (json) => ChatMessage.fromJson(json),
   );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -18,13 +20,20 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create:
+              (_) => WebSocketProvider()..connect('ws://127.0.0.1:8081/chat'),
+        ),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          appBar: AppBar(title: Text('WebSocket 聊天')),
+          body: MyHomePage(title: 'Flutter Demo Home Page'),
+        ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
@@ -40,57 +49,13 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   @override
-  void initState() {
-    super.initState();
-    final ws = Provider.of<WebSocketProvider>(context, listen: false);
-    ws.addMessageListener(_onWsMessage);
-  }
-
-  void _onWsMessage(String message) {
-    print("收到：$message");
-  }
-
-  @override
-  void dispose() {
-    Provider.of<WebSocketProvider>(
-      context,
-      listen: false,
-    ).removeMessageListener(_onWsMessage);
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Consumer<WebSocketProvider>(
-              builder: (context, wsProvider, _) {
-                final status = wsProvider.status;
-                return Column(
-                  children: [
-                    Text('当前状态: $status'),
-                    ElevatedButton(
-                      onPressed:
-                          () => wsProvider.send(
-                            '{"senderId":"flutter", "room":{"roomType":0}}',
-                          ),
-                      child: Text('发送消息'),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+      body: Center(),
     );
   }
 }
