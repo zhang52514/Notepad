@@ -45,9 +45,8 @@ class _SidebarState extends State<Sidebar> {
           Icon(Icons.groups, color: Colors.indigo),
           const SizedBox(height: 8),
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: ListView(
+              padding: EdgeInsets.zero,
               children: [
                 SidebarButton(
                   mainctl: widget.mainctl,
@@ -82,6 +81,12 @@ class _SidebarState extends State<Sidebar> {
               ],
             ),
           ),
+          SidebarButton(
+            mainctl: widget.mainctl,
+            index: 4,
+            name: "设置",
+            icon: HugeIcons.strokeRoundedUser,
+          ),
         ],
       ),
     );
@@ -104,30 +109,32 @@ class SidebarButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isActive = mainctl.currentIndex == index;
-
-    return InkWell(
-      onTap: () {
-        mainctl.setCurrentIndex(index);
-      },
-      child: SizedBox(
-        width: 70,
-        height: 70,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            HugeIcon(
-              icon: icon,
-              color: isActive ? Colors.indigo : Colors.grey.shade500,
-              size: 18,
-            ),
-            Text(
-              name,
-              style: TextStyle(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          mainctl.setCurrentIndex(index);
+        },
+        child: SizedBox(
+          width: 70,
+          height: 70,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              HugeIcon(
+                icon: icon,
                 color: isActive ? Colors.indigo : Colors.grey.shade500,
-                fontSize: 14,
+                size: 18,
               ),
-            ),
-          ],
+              Text(
+                name,
+                style: TextStyle(
+                  color: isActive ? Colors.indigo : Colors.grey.shade500,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -26,6 +26,8 @@ class TitlebarState extends State<Titlebar> {
     // 监听窗口最大化和还原
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
         backgroundColor:
             ThemeUtil.isDarkMode(context) ? null : Color(0xFFE6E6E9),
         title: Text(widget.title, style: TextStyle(fontSize: 18)),

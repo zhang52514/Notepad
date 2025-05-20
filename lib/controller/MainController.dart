@@ -36,6 +36,7 @@ class MainController extends ChangeNotifier {
 
   ThemeData appThemeData() {
     return ThemeData(
+      useMaterial3: true,
       ///字体
       fontFamily: "HarmonyOS",
       textTheme: const TextTheme(
