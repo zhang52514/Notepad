@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notepad/common/module/VibratingBadge.dart';
+import 'package:notepad/common/utils/ColorUtil.dart';
 import 'package:notepad/common/utils/DateUtil.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
@@ -40,7 +41,7 @@ class _ChatlistState extends State<Chatlist> {
                   padding: EdgeInsets.only(left: 2.w, right: 5.w),
                   child: ListTile(
                     key: ValueKey(widget.value.isScrolling),
-                    selected: index == 2,
+                    selected: widget.value.selectIndex == index,
                     selectedColor: Colors.white,
                     selectedTileColor: Colors.indigo,
                     dense: true,
@@ -59,11 +60,13 @@ class _ChatlistState extends State<Chatlist> {
                       "项目 ${index + 1}",
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
+                      style: TextStyle(fontSize: 12),
                     ),
                     subtitle: Text(
-                      "项目 ${index + 1} 的描述的描述的描述的描述的描述",
+                      "项目 ${index + 1} 的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述",
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
+                      style: TextStyle(fontSize: 10),
                     ),
                     trailing: Column(
                       children: [
@@ -81,7 +84,7 @@ class _ChatlistState extends State<Chatlist> {
                         VibratingBadge(messageCount: index),
                       ],
                     ),
-                    onTap: () {},
+                    onTap: () => widget.value.setSelectIndex(index),
                   ),
                 ),
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
+import 'package:notepad/views/home/ChatDeatil.dart';
 import 'package:notepad/views/home/ChatList.dart';
 import 'package:provider/provider.dart';
 
@@ -20,7 +21,11 @@ class _HomeviewState extends State<Homeview> {
           (context, ChatController value, child) => Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(width: 90.w, height: double.infinity, child: Chatlist(value: value)),
+              SizedBox(
+                width: 90.w,
+                height: double.infinity,
+                child: Chatlist(value: value),
+              ),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.all(2),
@@ -29,7 +34,7 @@ class _HomeviewState extends State<Homeview> {
                         ThemeUtil.isDarkMode(context)
                             ? Colors.grey.shade800
                             : Colors.white,
-                    child: Container(child: const Center(child: Text("暂无数据"))),
+                    child: Chatdeatil(),
                   ),
                 ),
               ),

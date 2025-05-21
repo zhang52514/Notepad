@@ -1,7 +1,6 @@
 import 'dart:ui';
 
-class ColorUtil{
-  
+class ColorUtil {
   ///边框
   static const Color border1 = Color.fromRGBO(220, 223, 230, 1);
   static const Color border2 = Color.fromRGBO(228, 231, 237, 1);
