@@ -11,7 +11,11 @@ class _ChatdeatilState extends State<Chatdeatil> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("我是标题"), backgroundColor: Colors.indigo),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text("我是标题"),
+        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.add))],
+      ),
       body: Center(child: Text("data")),
       bottomNavigationBar: Container(
         child: Text("bottom"),

@@ -34,7 +34,10 @@ class _HomeviewState extends State<Homeview> {
                         ThemeUtil.isDarkMode(context)
                             ? Colors.grey.shade800
                             : Colors.white,
-                    child: Chatdeatil(),
+                    child: Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Chatdeatil(),
+                    ),
                   ),
                 ),
               ),
