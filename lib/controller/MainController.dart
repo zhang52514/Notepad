@@ -9,23 +9,34 @@ import 'package:notepad/views/notpad/NotPadView.dart';
 
 class MainController extends ChangeNotifier {
   /// Brightness
+  /// 主题切换 默认light
   Brightness _brightness = Brightness.light;
-
   Brightness get brightness => _brightness;
 
   ///MAX | MIN
+  ///最大最小化 图标切换
   bool _extended = false;
   bool get extended => _extended;
-
-  ///pageIndex
-  int _currentIndex = 0;
-
-  int get currentIndex => _currentIndex;
+  set extendedValue(bool value) {
+    _extended = value;
+    notifyListeners();
+  }
 
   ///PageController
   ///用于控制页面的切换
   PageController pageController = PageController(initialPage: 0);
 
+  ///pageIndex
+  int _currentIndex = 0;
+  int get currentIndex => _currentIndex;
+
+  void setCurrentIndex(int value) {
+    _currentIndex = value;
+    pageController.jumpToPage(value);
+    notifyListeners();
+  }
+
+  //页面
   final List<Widget> views = [
     Homeview(),
     ContactView(),
@@ -34,9 +45,11 @@ class MainController extends ChangeNotifier {
     MineView(),
   ];
 
+  //applciation theme
   ThemeData appThemeData() {
     return ThemeData(
       useMaterial3: true,
+
       ///字体
       fontFamily: "HarmonyOS",
       textTheme: const TextTheme(
@@ -197,23 +210,7 @@ class MainController extends ChangeNotifier {
     //     SpUtil.getString('key_brightness', defValue: 'light') ?? 'light';
     // if (brightnessString == 'light') {
     //   return Brightness.light;
-    // }
+    // }d
     return Brightness.light;
-  }
-
-  set extendedValue(bool value) {
-    _extended = value;
-    notifyListeners();
-  }
-
-  void setCurrentIndex(int value) {
-    _currentIndex = value;
-    pageController.jumpToPage(value);
-    // pageController.animateToPage(
-    //   value,
-    //   duration: Duration(milliseconds: 300),
-    //   curve: Curves.linear,
-    // );
-    notifyListeners();
   }
 }

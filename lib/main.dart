@@ -1,4 +1,5 @@
 // Created by Anoxia on 2023/10/17.
+import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/controller/MainController.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flustars/flustars.dart';
@@ -70,6 +71,9 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<MainController>(
           create: (ctx) => MainController(),
+        ),
+        ChangeNotifierProvider<ChatController>(
+          create: (ctx) => ChatController(),
         ),
       ],
       child: Consumer<MainController>(

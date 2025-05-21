@@ -123,13 +123,13 @@ class SidebarButton extends StatelessWidget {
             children: [
               HugeIcon(
                 icon: icon,
-                color: isActive ? Colors.indigo : Colors.grey.shade500,
+                color: isActive ? Colors.indigo.shade400 : null,
                 size: 18,
               ),
               Text(
                 name,
                 style: TextStyle(
-                  color: isActive ? Colors.indigo : Colors.grey.shade500,
+                  color: isActive ? Colors.indigo.shade400 : null,
                   fontSize: 14,
                 ),
               ),
