@@ -83,9 +83,9 @@ class _SidebarState extends State<Sidebar> {
           ),
           SidebarButton(
             mainctl: widget.mainctl,
-            index: 4,
+            index: 5,
             name: "设置",
-            icon: HugeIcons.strokeRoundedUser,
+            icon: HugeIcons.strokeRoundedSettings01,
           ),
         ],
       ),

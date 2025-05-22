@@ -28,8 +28,7 @@ class TitlebarState extends State<Titlebar> {
       appBar: AppBar(
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor:
-            ThemeUtil.isDarkMode(context) ? null : Color(0xFFE6E6E9),
+        backgroundColor: ThemeUtil.isDarkMode(context) ? null : Color(0xFFE6E6E9),
         title: Text(widget.title, style: TextStyle(fontSize: 18)),
         actions: [
           IconButton(

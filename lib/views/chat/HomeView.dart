@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
-import 'package:notepad/views/home/ChatDeatil.dart';
-import 'package:notepad/views/home/ChatList.dart';
+import 'package:notepad/views/chat/ChatDeatil.dart';
+import 'package:notepad/views/chat/ChatList.dart';
 import 'package:provider/provider.dart';
 
 class Homeview extends StatefulWidget {
@@ -22,7 +22,7 @@ class _HomeviewState extends State<Homeview> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(
-                width: 90.w,
+                width: 95.w,
                 height: double.infinity,
                 child: Chatlist(value: value),
               ),

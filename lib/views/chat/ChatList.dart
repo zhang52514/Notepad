@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notepad/common/module/VibratingBadge.dart';
-import 'package:notepad/common/utils/ColorUtil.dart';
 import 'package:notepad/common/utils/DateUtil.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
 
+/// 聊天列表
+/// ListView + ListTile
 class Chatlist extends StatefulWidget {
   final ChatController value;
   const Chatlist({super.key, required this.value});
@@ -38,7 +39,7 @@ class _ChatlistState extends State<Chatlist> {
             itemCount: 50,
             itemBuilder:
                 (context, index) => Padding(
-                  padding: EdgeInsets.only(left: 2.w, right: 5.w),
+                  padding: EdgeInsets.only(left: 2.w, right: 7.w),
                   child: ListTile(
                     key: ValueKey(widget.value.isScrolling),
                     selected: widget.value.selectIndex == index,

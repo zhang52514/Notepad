@@ -7,13 +7,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:notepad/views/MainNavigatorWidgetWindows.dart';
+import 'package:notepad/views/chat/ChatMessage/AudioMessageRenderer.dart';
+import 'package:notepad/views/chat/ChatMessage/EmojiMessageRenderer.dart';
+import 'package:notepad/views/chat/ChatMessage/FileMessageRenderer.dart';
+import 'package:notepad/views/chat/ChatMessage/HtmlMessageRenderer.dart';
+import 'package:notepad/views/chat/ChatMessage/ImageMessageRenderer.dart';
+import 'package:notepad/views/chat/ChatMessage/LinkMessageRenderer.dart';
+import 'package:notepad/views/chat/ChatMessage/LocationMessageRenderer.dart';
+import 'package:notepad/views/chat/ChatMessage/MarkdownMessageRenderer.dart';
+import 'package:notepad/views/chat/ChatMessage/QuillMessageRenderer.dart';
+import 'package:notepad/views/chat/ChatMessage/TextMessageRenderer.dart';
+import 'package:notepad/views/chat/ChatMessage/VideoMessageRenderer.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SpUtil.getInstance();
+  registerAllMessageRenderers();
 
   ///Windows平台
   await windowManager.ensureInitialized();
@@ -49,7 +63,7 @@ Future<void> main() async {
 
   ''');
 
-runApp(
+  runApp(
     ScreenUtilInit(
       designSize: Size(375, 812), // 你的设计稿尺寸（比如 iPhone X）
       minTextAdapt: true,
@@ -60,6 +74,24 @@ runApp(
     ),
   );
 }
+
+
+
+void registerAllMessageRenderers() {
+  MarkdownMessageRenderer.register();
+  HtmlMessageRenderer.register();
+  QuillMessageRenderer.register();
+  TextMessageRenderer.register();
+  EmojiMessageRenderer.register();
+  ImageMessageRenderer.register();
+  AudioMessageRenderer.register();
+  VideoMessageRenderer.register();
+  FileMessageRenderer.register();
+  LocationMessageRenderer.register();
+  LinkMessageRenderer.register();
+}
+
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -98,9 +130,7 @@ class MyApp extends StatelessWidget {
               Locale('zh', 'CN'), // 中文简体
               Locale('en', 'US'), // 美国英语
             ],
-            home: Scaffold(
-              body: MainNavigatorWidgetWindows(),
-            ),
+            home: Scaffold(body: MainNavigatorWidgetWindows()),
           );
         },
       ),

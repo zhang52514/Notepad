@@ -3,7 +3,8 @@ import 'package:flustars/flustars.dart';
 import 'package:flutter/material.dart';
 import 'package:notepad/views/contact/ContactView.dart';
 import 'package:notepad/views/find/FindView.dart';
-import 'package:notepad/views/home/HomeView.dart';
+import 'package:notepad/views/chat/HomeIndex.dart';
+import 'package:notepad/views/chat/HomeView.dart';
 import 'package:notepad/views/mine/MineView.dart';
 import 'package:notepad/views/notpad/NotPadView.dart';
 
@@ -43,6 +44,7 @@ class MainController extends ChangeNotifier {
     NotPadView(),
     FindView(),
     MineView(),
+    HomeIndex(),
   ];
 
   //applciation theme
@@ -89,6 +91,16 @@ class MainController extends ChangeNotifier {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        ),
+      ),
+
+      ///侧边栏
+      drawerTheme: DrawerThemeData(
+        elevation: 20,
+        shadowColor: Colors.grey,
+        scrimColor: Colors.transparent,
+        endShape: ContinuousRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
         ),
       ),
 
