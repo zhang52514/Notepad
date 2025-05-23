@@ -41,17 +41,17 @@ class _ChatlistState extends State<Chatlist> {
                 (context, index) => Padding(
                   padding: EdgeInsets.only(left: 2.w, right: 7.w),
                   child: ListTile(
+                    visualDensity: VisualDensity.compact,
                     key: ValueKey(widget.value.isScrolling),
                     selected: widget.value.selectIndex == index,
                     selectedColor: Colors.white,
                     selectedTileColor: Colors.indigo,
-                    dense: true,
                     hoverColor:
                         widget.value.isScrolling
                             ? Colors.transparent
                             : Colors.indigo.shade300,
                     leading: CircleAvatar(
-                      radius: 30,
+                      radius: 18,
                       backgroundImage: NetworkImage(
                         'https://gd-filems.dancf.com/gaoding/cms/mcm79j/mcm79j/91878/c29d3bc0-0801-4ec7-a885-a52dedc3e5961503149.png',
                       ),
@@ -61,13 +61,13 @@ class _ChatlistState extends State<Chatlist> {
                       "项目 ${index + 1}",
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
-                      style: TextStyle(fontSize: 12),
+                      style: TextStyle(fontSize: 13),
                     ),
                     subtitle: Text(
                       "项目 ${index + 1} 的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述",
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
-                      style: TextStyle(fontSize: 10),
+                      style: TextStyle(fontSize: 11),
                     ),
                     trailing: Column(
                       children: [

@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/MessagePayload.dart';
 import 'package:notepad/views/chat/ChatMessage/TextMessageRenderer.dart';
 
-
 abstract class AbstractMessageRenderer {
-   final MessagePayload payload;
+  final MessagePayload payload;
 
   AbstractMessageRenderer(this.payload);
 
   Widget render(BuildContext context);
 
+  Color messageColor(BuildContext context) {
+    Color reverseColor =
+        ThemeUtil.isDarkMode(context) ? Colors.white : Colors.black;
+    return payload.reverse ? reverseColor : Colors.white;
+  }
 }
 
-typedef MessageRendererBuilder = AbstractMessageRenderer Function(MessagePayload payload);
+typedef MessageRendererBuilder =
+    AbstractMessageRenderer Function(MessagePayload payload);
 
 class MessageRendererRegistry {
   static final Map<String, MessageRendererBuilder> _registry = {};

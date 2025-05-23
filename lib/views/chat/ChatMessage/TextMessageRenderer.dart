@@ -6,9 +6,9 @@ class TextMessageRenderer extends AbstractMessageRenderer {
 
   @override
   Widget render(BuildContext context) {
-    return Text(
+    return SelectableText(
       payload.content,
-      style: TextStyle(color: payload.reverse ? Colors.black : Colors.white),
+      style: TextStyle(color: messageColor(context)),
     );
   }
 
