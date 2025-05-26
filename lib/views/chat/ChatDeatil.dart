@@ -87,7 +87,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
   @override
   Widget build(BuildContext context) {
     return Container(
-    
       decoration: BoxDecoration(
         border: Border.all(
           color:
@@ -145,26 +144,47 @@ class _ChatInputBarState extends State<ChatInputBar> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 IconButton(
-                  tooltip: "发送",
+                  tooltip: "表情及符号",
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
-                  alignment: Alignment.bottomCenter,
                   onPressed: () {},
-                  icon: HugeIcon(icon: HugeIcons.strokeRoundedSent, size: 18),
+                  icon: HugeIcon(
+                    icon: HugeIcons.strokeRoundedRelieved02,
+                    size: 18,
+                  ),
                 ),
+                IconButton(
+                  tooltip: "图片",
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () {},
+                  icon: HugeIcon(
+                    icon: HugeIcons.strokeRoundedImage02,
+                    size: 18,
+                  ),
+                ),
+                IconButton(
+                  tooltip: "文件",
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () {},
+                  icon: HugeIcon(
+                    icon: HugeIcons.strokeRoundedFiles02,
+                    size: 18,
+                  ),
+                ),
+                IconButton(
+                  tooltip: "更多格式",
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () {},
+                  icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 18),
+                ),
+                VerticalDivider(),
                 IconButton(
                   tooltip: "发送",
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
-                  alignment: Alignment.bottomCenter,
-                  onPressed: () {},
-                  icon: HugeIcon(icon: HugeIcons.strokeRoundedSent, size: 18),
-                ),
-                IconButton(
-                  tooltip: "发送",
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  alignment: Alignment.bottomCenter,
                   onPressed: () {},
                   icon: HugeIcon(icon: HugeIcons.strokeRoundedSent, size: 18),
                 ),
