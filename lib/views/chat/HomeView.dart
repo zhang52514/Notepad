@@ -16,6 +16,8 @@ class Homeview extends StatefulWidget {
 class _HomeviewState extends State<Homeview> {
   @override
   Widget build(BuildContext context) {
+    Color? color =
+        ThemeUtil.isDarkMode(context) ? Color(0xFF292929) : Colors.white;
     return Consumer<ChatController>(
       builder:
           (context, ChatController value, child) => Row(
@@ -30,10 +32,7 @@ class _HomeviewState extends State<Homeview> {
                 child: Padding(
                   padding: EdgeInsets.all(2),
                   child: Card(
-                    color:
-                        ThemeUtil.isDarkMode(context)
-                            ? Colors.grey.shade800
-                            : Colors.white,
+                    color: color,
                     child: Padding(
                       padding: EdgeInsets.all(8),
                       child: Chatdeatil(),

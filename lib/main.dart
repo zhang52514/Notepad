@@ -22,6 +22,8 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'controller/CQController.dart';
+
 
 
 Future<void> main() async {
@@ -106,6 +108,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<ChatController>(
           create: (ctx) => ChatController(),
+        ),
+        ChangeNotifierProvider<CQController>(
+          create: (ctx) => CQController(),
         ),
       ],
       child: Consumer<MainController>(

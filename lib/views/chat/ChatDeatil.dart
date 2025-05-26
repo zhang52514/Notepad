@@ -1,10 +1,22 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:bot_toast/bot_toast.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/module/AnoToast.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
+import 'package:notepad/controller/CQController.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/ChatMessageBubble.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/MessagePayload.dart';
+import 'package:notepad/views/chat/Components/ChatEmojiWidget.dart';
+import 'package:notepad/views/chat/Components/ChatInputBar/QuillCustomBuild/FileBuilder.dart';
+import 'package:provider/provider.dart';
+
+import 'Components/ChatInputBar/QuillCustomBuild/ImageBuilder.dart';
 
 class Chatdeatil extends StatefulWidget {
   const Chatdeatil({super.key});
@@ -19,7 +31,7 @@ class _ChatdeatilState extends State<Chatdeatil> {
   @override
   Widget build(BuildContext context) {
     Color? color =
-        ThemeUtil.isDarkMode(context) ? Color(0xFF424242) : Colors.white;
+        ThemeUtil.isDarkMode(context) ? Color(0xFF292929) : Colors.white;
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: color,
@@ -67,7 +79,7 @@ class _ChatdeatilState extends State<Chatdeatil> {
         ),
       ),
       bottomNavigationBar: Container(
-        height: 120.h,
+        height: 140.h,
         color: color,
         child: Padding(padding: EdgeInsets.all(10), child: ChatInputBar()),
       ),
@@ -83,117 +95,186 @@ class ChatInputBar extends StatefulWidget {
 }
 
 class _ChatInputBarState extends State<ChatInputBar> {
-  final QuillController controller = QuillController.basic();
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(
-          color:
-              ThemeUtil.isDarkMode(context)
-                  ? Colors.grey.shade600
-                  : Colors.grey.shade300,
-        ),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: QuillEditor.basic(
-              controller: controller,
-              config: QuillEditorConfig(
-                textSelectionThemeData: TextSelectionThemeData(
-                  cursorColor:
-                      ThemeUtil.isDarkMode(context)
-                          ? Colors.white
-                          : Colors.indigo,
-                  selectionColor: Colors.blue.withValues(alpha: 0.5),
-                ),
-                customStyles: DefaultStyles(
-                  paragraph: DefaultTextBlockStyle(
-                    TextStyle(
-                      fontSize: 14,
-                      color:
+    late Function close;
+    return Consumer<CQController>(
+      builder: (context, CQController value, child) {
+        return Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color:
+                  ThemeUtil.isDarkMode(context)
+                      ? Colors.grey.shade600
+                      : Colors.grey.shade300,
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: QuillEditor.basic(
+                  controller: value.controller,
+                  config: QuillEditorConfig(
+                    textSelectionThemeData: TextSelectionThemeData(
+                      cursorColor:
                           ThemeUtil.isDarkMode(context)
                               ? Colors.white
-                              : Colors.black,
+                              : Colors.indigo,
+                      selectionColor: Colors.blue.withValues(alpha: 0.5),
                     ),
-                    HorizontalSpacing(0, 0),
-                    VerticalSpacing(6, 0),
-                    VerticalSpacing(6, 0),
-                    null,
-                  ),
-                  placeHolder: DefaultTextBlockStyle(
-                    TextStyle(fontSize: 14, color: Colors.grey),
-                    HorizontalSpacing(0, 0),
-                    VerticalSpacing(6, 0),
-                    VerticalSpacing(6, 0),
-                    null,
+                    customStyles: DefaultStyles(
+                      paragraph: DefaultTextBlockStyle(
+                        TextStyle(
+                          fontSize: 14,
+                          color:
+                              ThemeUtil.isDarkMode(context)
+                                  ? Colors.white
+                                  : Colors.black,
+                        ),
+                        HorizontalSpacing(0, 0),
+                        VerticalSpacing(6, 0),
+                        VerticalSpacing(6, 0),
+                        null,
+                      ),
+                      placeHolder: DefaultTextBlockStyle(
+                        TextStyle(fontSize: 14, color: Colors.grey),
+                        HorizontalSpacing(0, 0),
+                        VerticalSpacing(6, 0),
+                        VerticalSpacing(6, 0),
+                        null,
+                      ),
+                    ),
+                    placeholder: "输入消息",
+                    autoFocus: true,
+                    padding: const EdgeInsets.all(8),
+                    embedBuilders: [ImageBuilder(),FileBuilder()],
                   ),
                 ),
-                placeholder: "输入消息",
-                autoFocus: true,
-                padding: const EdgeInsets.all(10),
               ),
-            ),
+              Container(
+                height: 30.h,
+                padding: EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Builder(
+                      builder: (context) {
+                        return IconButton(
+                          tooltip: "表情及符号",
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () {
+                            close = AnoToast.showWidget(
+                              context,
+                              PreferDirection.topCenter,
+                              ChatEmojiWidget(
+                                cqController: value,
+                                closeSelected: () {
+                                  close();
+                                },
+                              ),
+                            );
+                          },
+                          icon: HugeIcon(
+                            icon: HugeIcons.strokeRoundedRelieved02,
+                            size: 18,
+                          ),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      tooltip: "图片",
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () async {
+                        FilePickerResult? result = await FilePicker.platform
+                            .pickFiles(
+                              allowMultiple: true,
+                              type: FileType.custom,
+                              allowedExtensions: [
+                                'jpg',
+                                'jpeg',
+                                'png',
+                                'gif',
+                                'bmp',
+                                'webp',
+                              ],
+                            );
+                        if (result != null) {
+                          List<File> files =
+                              result.paths.map((path) => File(path!)).toList();
+                          for (var file in files) {
+                            final path = file.path;
+                            int fileSize = file.lengthSync();
+                            print("图片：$fileSize=$path");
+                            value.insertEmbedAtCursor("image", path);
+                          }
+                        }
+                      },
+                      icon: HugeIcon(
+                        icon: HugeIcons.strokeRoundedImage02,
+                        size: 18,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: "文件",
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () async {
+                        FilePickerResult? result = await FilePicker.platform
+                            .pickFiles(allowMultiple: true);
+                        if (result != null) {
+                          List<File> files =
+                              result.paths.map((path) => File(path!)).toList();
+                          for (var file in files) {
+                            final path = file.path;
+                            int fileSize = file.lengthSync();
+                            print("文件：$fileSize=$path");
+                            value.insertEmbedAtCursor("file", path);
+                          }
+
+                        }
+                      },
+                      icon: HugeIcon(
+                        icon: HugeIcons.strokeRoundedFiles02,
+                        size: 18,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: "更多格式",
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {},
+                      icon: HugeIcon(
+                        icon: HugeIcons.strokeRoundedAdd01,
+                        size: 18,
+                      ),
+                    ),
+                    VerticalDivider(),
+                    IconButton(
+                      tooltip: "发送",
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        final String json = jsonEncode(
+                          value.controller.document.toDelta().toJson(),
+                        );
+                        print(json);
+                      },
+                      icon: HugeIcon(
+                        icon: HugeIcons.strokeRoundedSent,
+                        size: 18,
+                      ),
+                    ),
+                    SizedBox(width: 5.w),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Container(
-            height: 30.h,
-            padding: EdgeInsets.only(bottom: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  tooltip: "表情及符号",
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () {},
-                  icon: HugeIcon(
-                    icon: HugeIcons.strokeRoundedRelieved02,
-                    size: 18,
-                  ),
-                ),
-                IconButton(
-                  tooltip: "图片",
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () {},
-                  icon: HugeIcon(
-                    icon: HugeIcons.strokeRoundedImage02,
-                    size: 18,
-                  ),
-                ),
-                IconButton(
-                  tooltip: "文件",
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () {},
-                  icon: HugeIcon(
-                    icon: HugeIcons.strokeRoundedFiles02,
-                    size: 18,
-                  ),
-                ),
-                IconButton(
-                  tooltip: "更多格式",
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () {},
-                  icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 18),
-                ),
-                VerticalDivider(),
-                IconButton(
-                  tooltip: "发送",
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () {},
-                  icon: HugeIcon(icon: HugeIcons.strokeRoundedSent, size: 18),
-                ),
-                SizedBox(width: 5.w),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

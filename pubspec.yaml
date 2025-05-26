@@ -49,7 +49,12 @@ dependencies:
   hugeicons: ^0.0.11
   #屏幕适配
   flutter_screenutil: ^5.9.3
-  extended_text_field: ^16.0.2
+  #emoji
+  emoji_picker_flutter: ^4.3.0
+  #文件资源管理器
+  file_picker: ^10.1.9
+  #图片缓存
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:
