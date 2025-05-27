@@ -192,16 +192,18 @@ class AnoToast {
   ///根据context显示Widget
   ///一般使用Build组件定位
   static Function showWidget(
-    BuildContext context,
-    PreferDirection direction,
-    Widget child,
-  ) {
+    BuildContext context, {
+    required Widget child,
+    PreferDirection direction = PreferDirection.topLeft,
+    VoidCallback? onClose,
+  }) {
     return BotToast.showAttachedWidget(
       targetContext: context,
       preferDirection: direction,
       attachedBuilder: (void Function() cancelFunc) {
         return child;
       },
+      onClose: onClose,
     );
   }
 

@@ -10,7 +10,6 @@ import 'package:notepad/views/MainNavigatorWidgetWindows.dart';
 import 'package:notepad/views/chat/ChatMessage/AudioMessageRenderer.dart';
 import 'package:notepad/views/chat/ChatMessage/EmojiMessageRenderer.dart';
 import 'package:notepad/views/chat/ChatMessage/FileMessageRenderer.dart';
-import 'package:notepad/views/chat/ChatMessage/HtmlMessageRenderer.dart';
 import 'package:notepad/views/chat/ChatMessage/ImageMessageRenderer.dart';
 import 'package:notepad/views/chat/ChatMessage/LinkMessageRenderer.dart';
 import 'package:notepad/views/chat/ChatMessage/LocationMessageRenderer.dart';
@@ -81,7 +80,6 @@ Future<void> main() async {
 
 void registerAllMessageRenderers() {
   MarkdownMessageRenderer.register();
-  HtmlMessageRenderer.register();
   QuillMessageRenderer.register();
   TextMessageRenderer.register();
   EmojiMessageRenderer.register();

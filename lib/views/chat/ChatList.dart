@@ -45,11 +45,11 @@ class _ChatlistState extends State<Chatlist> {
                     key: ValueKey(widget.value.isScrolling),
                     selected: widget.value.selectIndex == index,
                     selectedColor: Colors.white,
-                    selectedTileColor: Colors.indigo,
+                    selectedTileColor: Colors.indigo.shade500,
                     hoverColor:
                         widget.value.isScrolling
                             ? Colors.transparent
-                            : Colors.indigo.shade300,
+                            : Colors.indigo.shade400,
                     leading: CircleAvatar(
                       radius: 18,
                       backgroundImage: NetworkImage(

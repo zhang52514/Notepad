@@ -20,9 +20,10 @@ class ChatMessageBubble extends StatelessWidget {
         margin: EdgeInsets.symmetric(vertical: 8.h),
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.8, // 最大不超过80%
+            maxWidth: MediaQuery.of(context).size.width * 0.5, // 最大不超过80%
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children:
                 payload.reverse

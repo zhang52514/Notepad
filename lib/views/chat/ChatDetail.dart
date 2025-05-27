@@ -7,25 +7,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/domain/ChatMessage.dart';
 import 'package:notepad/common/module/AnoToast.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/controller/CQController.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/ChatMessageBubble.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/MessagePayload.dart';
 import 'package:notepad/views/chat/Components/ChatEmojiWidget.dart';
+import 'package:notepad/views/chat/Components/ChatInputBar/AtUserListWidget.dart';
+import 'package:notepad/views/chat/Components/ChatInputBar/QuillCustomBuild/AtBuilder.dart';
 import 'package:notepad/views/chat/Components/ChatInputBar/QuillCustomBuild/FileBuilder.dart';
 import 'package:provider/provider.dart';
 
 import 'Components/ChatInputBar/QuillCustomBuild/ImageBuilder.dart';
 
-class Chatdeatil extends StatefulWidget {
-  const Chatdeatil({super.key});
+class ChatDetail extends StatefulWidget {
+  const ChatDetail({super.key});
 
   @override
-  State<Chatdeatil> createState() => _ChatdeatilState();
+  State<ChatDetail> createState() => _ChatDetailState();
 }
 
-class _ChatdeatilState extends State<Chatdeatil> {
+class _ChatDetailState extends State<ChatDetail> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -58,13 +61,16 @@ class _ChatdeatilState extends State<Chatdeatil> {
         ],
       ),
       body: ListView.builder(
-        itemCount: 10,
+        itemCount: 2,
         padding: EdgeInsets.only(left: 10.w, right: 10.w),
         itemBuilder: (context, index) {
           MessagePayload payload = MessagePayload(
-            type: "text",
+            type: index == 1 ?'quill':'text',
             reverse: index % 2 == 0,
-            content: "Hello$index",
+            content:'[{"insert":{"image":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\壁纸1.png"}},{"insert":"\\n"},{"insert":{"image":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\壁纸3_compressed.png"}},{"insert":"\\n"},{"insert":{"at":"data2"}},{"insert":" yes\\n"}]',
+            extra: {
+              'value': 'data3'
+            }
           );
           return ChatMessageBubble(payload: payload);
         },
@@ -99,10 +105,32 @@ class _ChatInputBarState extends State<ChatInputBar> {
   bool _isPicking = false;
 
   @override
+  void initState() {
+    super.initState();
+    Provider.of<CQController>(context, listen: false).setupAtMentionListener();
+  }
+
+  @override
   Widget build(BuildContext context) {
     late Function close;
+    late Function atClose;
     return Consumer<CQController>(
       builder: (context, CQController value, child) {
+        if (value.showAtSuggestion) {
+          atClose = AnoToast.showWidget(
+            context,
+            child: AtUserListWidget(
+              closeSelected: () {
+                atClose();
+              },
+              cqController: value,
+            ),
+            onClose: () {
+              value.showAtSuggestion = false;
+            },
+          );
+        }
+
         return Container(
           decoration: BoxDecoration(
             border: Border.all(
@@ -154,7 +182,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     padding: const EdgeInsets.all(4),
                     embedBuilders: [
                       ImageBuilder(),
-                      FileBuilder(value.controller),
+                      AtBuilder(),
+                      FileBuilder(controller: value.controller),
                     ],
                   ),
                 ),
@@ -174,8 +203,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
                           onPressed: () {
                             close = AnoToast.showWidget(
                               context,
-                              PreferDirection.topCenter,
-                              ChatEmojiWidget(
+                              direction: PreferDirection.topCenter,
+                              child: ChatEmojiWidget(
                                 cqController: value,
                                 closeSelected: () {
                                   close();
@@ -286,7 +315,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         final String json = jsonEncode(
                           value.controller.document.toDelta().toJson(),
                         );
+                        ChatMessage msg = value.parseDeltaToMessage();
+                        // value.parseDeltaToMessage()
                         print(json);
+                        print(msg);
                       },
                       icon: HugeIcon(
                         icon: HugeIcons.strokeRoundedSent,
@@ -303,4 +335,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
       },
     );
   }
+
+
 }

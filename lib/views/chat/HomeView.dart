@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
-import 'package:notepad/views/chat/ChatDeatil.dart';
+import 'package:notepad/views/chat/ChatDetail.dart';
 import 'package:notepad/views/chat/ChatList.dart';
 import 'package:provider/provider.dart';
 
@@ -35,7 +35,7 @@ class _HomeviewState extends State<Homeview> {
                     color: color,
                     child: Padding(
                       padding: EdgeInsets.all(8),
-                      child: Chatdeatil(),
+                      child: ChatDetail(),
                     ),
                   ),
                 ),

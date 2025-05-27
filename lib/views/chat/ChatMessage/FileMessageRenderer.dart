@@ -6,7 +6,6 @@ class FileMessageRenderer extends AbstractMessageRenderer {
 
   @override
   Widget render(BuildContext context) {
-    // TODO: implement render
     throw UnimplementedError();
   }
 

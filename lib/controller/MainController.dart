@@ -223,6 +223,6 @@ class MainController extends ChangeNotifier {
     // if (brightnessString == 'light') {
     //   return Brightness.light;
     // }d
-    return Brightness.dark;
+    return Brightness.light;
   }
 }
