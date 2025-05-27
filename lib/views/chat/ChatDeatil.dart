@@ -95,6 +95,9 @@ class ChatInputBar extends StatefulWidget {
 }
 
 class _ChatInputBarState extends State<ChatInputBar> {
+  ///资源管理器防抖
+  bool _isPicking = false;
+
   @override
   Widget build(BuildContext context) {
     late Function close;
@@ -145,10 +148,14 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         null,
                       ),
                     ),
+                    scrollBottomInset: 10,
                     placeholder: "输入消息",
                     autoFocus: true,
-                    padding: const EdgeInsets.all(8),
-                    embedBuilders: [ImageBuilder(),FileBuilder()],
+                    padding: const EdgeInsets.all(4),
+                    embedBuilders: [
+                      ImageBuilder(),
+                      FileBuilder(value.controller),
+                    ],
                   ),
                 ),
               ),
@@ -188,28 +195,38 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       padding: EdgeInsets.zero,
                       visualDensity: VisualDensity.compact,
                       onPressed: () async {
-                        FilePickerResult? result = await FilePicker.platform
-                            .pickFiles(
-                              allowMultiple: true,
-                              type: FileType.custom,
-                              allowedExtensions: [
-                                'jpg',
-                                'jpeg',
-                                'png',
-                                'gif',
-                                'bmp',
-                                'webp',
-                              ],
-                            );
-                        if (result != null) {
-                          List<File> files =
-                              result.paths.map((path) => File(path!)).toList();
-                          for (var file in files) {
-                            final path = file.path;
-                            int fileSize = file.lengthSync();
-                            print("图片：$fileSize=$path");
-                            value.insertEmbedAtCursor("image", path);
+                        if (_isPicking) return; // 阻止多次点击
+                        setState(() => _isPicking = true);
+                        try {
+                          FilePickerResult? result = await FilePicker.platform
+                              .pickFiles(
+                                allowMultiple: true,
+                                type: FileType.custom,
+                                allowedExtensions: [
+                                  'jpg',
+                                  'jpeg',
+                                  'png',
+                                  'gif',
+                                  'bmp',
+                                  'webp',
+                                ],
+                              );
+                          if (result != null) {
+                            List<File> files =
+                                result.paths
+                                    .map((path) => File(path!))
+                                    .toList();
+                            for (var file in files) {
+                              final path = file.path;
+                              int fileSize = file.lengthSync();
+                              print("图片：$fileSize=$path");
+                              value.insertEmbedAtCursor("image", path);
+                            }
                           }
+                        } catch (e) {
+                          print("选择图片失败: $e");
+                        } finally {
+                          setState(() => _isPicking = false);
                         }
                       },
                       icon: HugeIcon(
@@ -222,18 +239,27 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       padding: EdgeInsets.zero,
                       visualDensity: VisualDensity.compact,
                       onPressed: () async {
-                        FilePickerResult? result = await FilePicker.platform
-                            .pickFiles(allowMultiple: true);
-                        if (result != null) {
-                          List<File> files =
-                              result.paths.map((path) => File(path!)).toList();
-                          for (var file in files) {
-                            final path = file.path;
-                            int fileSize = file.lengthSync();
-                            print("文件：$fileSize=$path");
-                            value.insertEmbedAtCursor("file", path);
+                        if (_isPicking) return; // 阻止多次点击
+                        setState(() => _isPicking = true);
+                        try {
+                          FilePickerResult? result = await FilePicker.platform
+                              .pickFiles(allowMultiple: true);
+                          if (result != null) {
+                            List<File> files =
+                                result.paths
+                                    .map((path) => File(path!))
+                                    .toList();
+                            for (var file in files) {
+                              final path = file.path;
+                              int fileSize = file.lengthSync();
+                              print("文件：$fileSize=$path");
+                              value.insertEmbedAtCursor("file", path);
+                            }
                           }
-
+                        } catch (e) {
+                          print("选择图片失败: $e");
+                        } finally {
+                          setState(() => _isPicking = false);
                         }
                       },
                       icon: HugeIcon(

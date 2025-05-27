@@ -56,9 +56,7 @@ class ImageBuilder implements EmbedBuilder {
     }
 
     return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: 60.h, // 高度最多50
-      ),
+      constraints: BoxConstraints(maxHeight: 80.h),
       child: Padding(padding: EdgeInsets.all(4), child: imageWidget),
     );
   }
