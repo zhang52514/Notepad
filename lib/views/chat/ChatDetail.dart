@@ -65,12 +65,11 @@ class _ChatDetailState extends State<ChatDetail> {
         padding: EdgeInsets.only(left: 10.w, right: 10.w),
         itemBuilder: (context, index) {
           MessagePayload payload = MessagePayload(
-            type: index == 1 ?'quill':'text',
+            type: index == 1 ? 'quill' : 'text',
             reverse: index % 2 == 0,
-            content:'[{"insert":{"image":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\壁纸1.png"}},{"insert":"\\n"},{"insert":{"image":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\壁纸3_compressed.png"}},{"insert":"\\n"},{"insert":{"at":"data2"}},{"insert":" yes\\n"}]',
-            extra: {
-              'value': 'data3'
-            }
+            content:
+                '[{"insert":"\\n\\n\\n\\n\\n超级市场你参考才能\\n\\n\\n\\n\\n城市客车  撒擦\\n\\n场景四\\n\\n\\nCsiro\\nJIC\\n\\n"},{"insert":{"image":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\no image L size.png"}},{"insert":"\\n"},{"insert":{"file":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\2025年团建相关注意事项通知.pdf"}},{"insert":"\\n"},{"insert":{"file":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\OM.apk"}},{"insert":"\\n"},{"insert":{"image":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\壁纸3.png"}},{"insert":"\\n"},{"insert":{"image":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\top_bottom_new.jpg"}},{"insert":"\\n⏰🐕😃💼\\n\\n承诺书基础上\\n\\n"},{"insert":{"at":"data6"}},{"insert":"\\n@"},{"insert":{"at":"data5"}},{"insert":"\\n\\n"}]',
+            extra: {'value': 'data3'},
           );
           return ChatMessageBubble(payload: payload);
         },
@@ -84,11 +83,7 @@ class _ChatDetailState extends State<ChatDetail> {
           child: Center(child: Text("data")),
         ),
       ),
-      bottomNavigationBar: Container(
-        height: 140.h,
-        color: color,
-        child: Padding(padding: EdgeInsets.all(10), child: ChatInputBar()),
-      ),
+      bottomNavigationBar: ChatInputBar()
     );
   }
 }
@@ -131,210 +126,215 @@ class _ChatInputBarState extends State<ChatInputBar> {
           );
         }
 
-        return Container(
-          decoration: BoxDecoration(
-            border: Border.all(
-              color:
-                  ThemeUtil.isDarkMode(context)
-                      ? Colors.grey.shade600
-                      : Colors.grey.shade300,
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12.w,vertical: 4.h),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color:
+                    ThemeUtil.isDarkMode(context)
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade300,
+              ),
+              borderRadius: BorderRadius.circular(10),
             ),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                child: QuillEditor.basic(
-                  controller: value.controller,
-                  config: QuillEditorConfig(
-                    textSelectionThemeData: TextSelectionThemeData(
-                      cursorColor:
-                          ThemeUtil.isDarkMode(context)
-                              ? Colors.white
-                              : Colors.indigo,
-                      selectionColor: Colors.blue.withValues(alpha: 0.5),
-                    ),
-                    customStyles: DefaultStyles(
-                      paragraph: DefaultTextBlockStyle(
-                        TextStyle(
-                          fontSize: 14,
-                          color:
-                              ThemeUtil.isDarkMode(context)
-                                  ? Colors.white
-                                  : Colors.black,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  constraints: BoxConstraints(maxHeight: 200.h),
+                  child: QuillEditor.basic(
+                    controller: value.controller,
+                    config: QuillEditorConfig(
+                      textSelectionThemeData: TextSelectionThemeData(
+                        cursorColor:
+                            ThemeUtil.isDarkMode(context)
+                                ? Colors.white
+                                : Colors.indigo,
+                        selectionColor: Colors.blue.withValues(alpha: 0.5),
+                      ),
+                      customStyles: DefaultStyles(
+                        paragraph: DefaultTextBlockStyle(
+                          TextStyle(
+                            fontSize: 14,
+                            color:
+                                ThemeUtil.isDarkMode(context)
+                                    ? Colors.white
+                                    : Colors.black,
+                          ),
+                          HorizontalSpacing(0, 0),
+                          VerticalSpacing(6, 0),
+                          VerticalSpacing(6, 0),
+                          null,
                         ),
-                        HorizontalSpacing(0, 0),
-                        VerticalSpacing(6, 0),
-                        VerticalSpacing(6, 0),
-                        null,
+                        placeHolder: DefaultTextBlockStyle(
+                          TextStyle(fontSize: 14, color: Colors.grey),
+                          HorizontalSpacing(0, 0),
+                          VerticalSpacing(6, 0),
+                          VerticalSpacing(6, 0),
+                          null,
+                        ),
                       ),
-                      placeHolder: DefaultTextBlockStyle(
-                        TextStyle(fontSize: 14, color: Colors.grey),
-                        HorizontalSpacing(0, 0),
-                        VerticalSpacing(6, 0),
-                        VerticalSpacing(6, 0),
-                        null,
-                      ),
+                      scrollBottomInset: 10,
+                      scrollable: true,
+                      placeholder: "输入消息",
+                      autoFocus: true,
+                      padding: const EdgeInsets.all(4),
+                      embedBuilders: [
+                        ImageBuilder(),
+                        AtBuilder(),
+                        FileBuilder(controller: value.controller),
+                      ],
                     ),
-                    scrollBottomInset: 10,
-                    placeholder: "输入消息",
-                    autoFocus: true,
-                    padding: const EdgeInsets.all(4),
-                    embedBuilders: [
-                      ImageBuilder(),
-                      AtBuilder(),
-                      FileBuilder(controller: value.controller),
+                  ),
+                ),
+                Container(
+                  height: 30.h,
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Builder(
+                        builder: (context) {
+                          return IconButton(
+                            tooltip: "表情及符号",
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () {
+                              close = AnoToast.showWidget(
+                                context,
+                                direction: PreferDirection.topCenter,
+                                child: ChatEmojiWidget(
+                                  cqController: value,
+                                  closeSelected: () {
+                                    close();
+                                  },
+                                ),
+                              );
+                            },
+                            icon: HugeIcon(
+                              icon: HugeIcons.strokeRoundedRelieved02,
+                              size: 18,
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        tooltip: "图片",
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () async {
+                          if (_isPicking) return; // 阻止多次点击
+                          setState(() => _isPicking = true);
+                          try {
+                            FilePickerResult? result = await FilePicker.platform
+                                .pickFiles(
+                                  allowMultiple: true,
+                                  type: FileType.custom,
+                                  allowedExtensions: [
+                                    'jpg',
+                                    'jpeg',
+                                    'png',
+                                    'gif',
+                                    'bmp',
+                                    'webp',
+                                  ],
+                                );
+                            if (result != null) {
+                              List<File> files =
+                                  result.paths
+                                      .map((path) => File(path!))
+                                      .toList();
+                              for (var file in files) {
+                                final path = file.path;
+                                int fileSize = file.lengthSync();
+                                print("图片：$fileSize=$path");
+                                value.insertEmbedAtCursor("image", path);
+                              }
+                            }
+                          } catch (e) {
+                            print("选择图片失败: $e");
+                          } finally {
+                            setState(() => _isPicking = false);
+                          }
+                        },
+                        icon: HugeIcon(
+                          icon: HugeIcons.strokeRoundedImage02,
+                          size: 18,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: "文件",
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () async {
+                          if (_isPicking) return; // 阻止多次点击
+                          setState(() => _isPicking = true);
+                          try {
+                            FilePickerResult? result = await FilePicker.platform
+                                .pickFiles(allowMultiple: true);
+                            if (result != null) {
+                              List<File> files =
+                                  result.paths
+                                      .map((path) => File(path!))
+                                      .toList();
+                              for (var file in files) {
+                                final path = file.path;
+                                int fileSize = file.lengthSync();
+                                print("文件：$fileSize=$path");
+                                value.insertEmbedAtCursor("file", path);
+                              }
+                            }
+                          } catch (e) {
+                            print("选择图片失败: $e");
+                          } finally {
+                            setState(() => _isPicking = false);
+                          }
+                        },
+                        icon: HugeIcon(
+                          icon: HugeIcons.strokeRoundedFiles02,
+                          size: 18,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: "更多格式",
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {},
+                        icon: HugeIcon(
+                          icon: HugeIcons.strokeRoundedAdd01,
+                          size: 18,
+                        ),
+                      ),
+                      VerticalDivider(),
+                      IconButton(
+                        tooltip: "发送",
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          final String json = jsonEncode(
+                            value.controller.document.toDelta().toJson(),
+                          );
+                          ChatMessage msg = value.parseDeltaToMessage();
+                          // value.parseDeltaToMessage()
+                          print(json);
+                          print(msg);
+                        },
+                        icon: HugeIcon(
+                          icon: HugeIcons.strokeRoundedSent,
+                          size: 18,
+                        ),
+                      ),
+                      SizedBox(width: 5.w),
                     ],
                   ),
                 ),
-              ),
-              Container(
-                height: 30.h,
-                padding: EdgeInsets.only(bottom: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Builder(
-                      builder: (context) {
-                        return IconButton(
-                          tooltip: "表情及符号",
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () {
-                            close = AnoToast.showWidget(
-                              context,
-                              direction: PreferDirection.topCenter,
-                              child: ChatEmojiWidget(
-                                cqController: value,
-                                closeSelected: () {
-                                  close();
-                                },
-                              ),
-                            );
-                          },
-                          icon: HugeIcon(
-                            icon: HugeIcons.strokeRoundedRelieved02,
-                            size: 18,
-                          ),
-                        );
-                      },
-                    ),
-                    IconButton(
-                      tooltip: "图片",
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () async {
-                        if (_isPicking) return; // 阻止多次点击
-                        setState(() => _isPicking = true);
-                        try {
-                          FilePickerResult? result = await FilePicker.platform
-                              .pickFiles(
-                                allowMultiple: true,
-                                type: FileType.custom,
-                                allowedExtensions: [
-                                  'jpg',
-                                  'jpeg',
-                                  'png',
-                                  'gif',
-                                  'bmp',
-                                  'webp',
-                                ],
-                              );
-                          if (result != null) {
-                            List<File> files =
-                                result.paths
-                                    .map((path) => File(path!))
-                                    .toList();
-                            for (var file in files) {
-                              final path = file.path;
-                              int fileSize = file.lengthSync();
-                              print("图片：$fileSize=$path");
-                              value.insertEmbedAtCursor("image", path);
-                            }
-                          }
-                        } catch (e) {
-                          print("选择图片失败: $e");
-                        } finally {
-                          setState(() => _isPicking = false);
-                        }
-                      },
-                      icon: HugeIcon(
-                        icon: HugeIcons.strokeRoundedImage02,
-                        size: 18,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: "文件",
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () async {
-                        if (_isPicking) return; // 阻止多次点击
-                        setState(() => _isPicking = true);
-                        try {
-                          FilePickerResult? result = await FilePicker.platform
-                              .pickFiles(allowMultiple: true);
-                          if (result != null) {
-                            List<File> files =
-                                result.paths
-                                    .map((path) => File(path!))
-                                    .toList();
-                            for (var file in files) {
-                              final path = file.path;
-                              int fileSize = file.lengthSync();
-                              print("文件：$fileSize=$path");
-                              value.insertEmbedAtCursor("file", path);
-                            }
-                          }
-                        } catch (e) {
-                          print("选择图片失败: $e");
-                        } finally {
-                          setState(() => _isPicking = false);
-                        }
-                      },
-                      icon: HugeIcon(
-                        icon: HugeIcons.strokeRoundedFiles02,
-                        size: 18,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: "更多格式",
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () {},
-                      icon: HugeIcon(
-                        icon: HugeIcons.strokeRoundedAdd01,
-                        size: 18,
-                      ),
-                    ),
-                    VerticalDivider(),
-                    IconButton(
-                      tooltip: "发送",
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () {
-                        final String json = jsonEncode(
-                          value.controller.document.toDelta().toJson(),
-                        );
-                        ChatMessage msg = value.parseDeltaToMessage();
-                        // value.parseDeltaToMessage()
-                        print(json);
-                        print(msg);
-                      },
-                      icon: HugeIcon(
-                        icon: HugeIcons.strokeRoundedSent,
-                        size: 18,
-                      ),
-                    ),
-                    SizedBox(width: 5.w),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
     );
   }
-
-
 }

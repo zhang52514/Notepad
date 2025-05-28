@@ -148,6 +148,8 @@ class CQController extends ChangeNotifier {
     return chatMsg;
   }
 
+  ///
+  /// 判断是否是纯emoji
   bool isPureEmoji(String input) {
     final trimmed = input.trim(); // 移除换行符和空格
     // Emoji Unicode 范围匹配

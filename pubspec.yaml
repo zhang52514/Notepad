@@ -55,6 +55,8 @@ dependencies:
   file_picker: ^10.1.9
   #图片缓存
   cached_network_image: ^3.4.1
+  #图片查看
+  photo_view: ^0.15.0
 
 dev_dependencies:
   flutter_test:
