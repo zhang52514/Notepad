@@ -11,6 +11,7 @@ import 'package:notepad/common/domain/ChatMessage.dart';
 import 'package:notepad/common/module/AnoToast.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/controller/CQController.dart';
+import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/ChatMessageBubble.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/MessagePayload.dart';
 import 'package:notepad/views/chat/Components/ChatEmojiWidget.dart';
@@ -22,7 +23,8 @@ import 'package:provider/provider.dart';
 import 'Components/ChatInputBar/QuillCustomBuild/ImageBuilder.dart';
 
 class ChatDetail extends StatefulWidget {
-  const ChatDetail({super.key});
+  final String roomId;
+  const ChatDetail({super.key, required this.roomId});
 
   @override
   State<ChatDetail> createState() => _ChatDetailState();
@@ -35,61 +37,72 @@ class _ChatDetailState extends State<ChatDetail> {
   Widget build(BuildContext context) {
     Color? color =
         ThemeUtil.isDarkMode(context) ? Color(0xFF292929) : Colors.white;
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: color,
-      appBar: AppBar(
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        actionsPadding: EdgeInsets.zero,
-        backgroundColor: color,
-        title: Text("Saikoune"),
-        actions: [
-          IconButton(
-            onPressed: () {
-              _scaffoldKey.currentState?.openEndDrawer();
-            },
-            icon: HugeIcon(icon: HugeIcons.strokeRoundedUserMultiple, size: 18),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: HugeIcon(
-              icon: HugeIcons.strokeRoundedMoreHorizontal,
-              size: 18,
-            ),
-          ),
-        ],
-      ),
-      body: ListView.builder(
-        itemCount: 2,
-        padding: EdgeInsets.only(left: 10.w, right: 10.w),
-        itemBuilder: (context, index) {
-          MessagePayload payload = MessagePayload(
-            type: index == 1 ? 'quill' : 'text',
-            reverse: index % 2 == 0,
-            content:
-                '[{"insert":"\\n\\n\\n\\n\\n超级市场你参考才能\\n\\n\\n\\n\\n城市客车  撒擦\\n\\n场景四\\n\\n\\nCsiro\\nJIC\\n\\n"},{"insert":{"image":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\no image L size.png"}},{"insert":"\\n"},{"insert":{"file":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\2025年团建相关注意事项通知.pdf"}},{"insert":"\\n"},{"insert":{"file":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\OM.apk"}},{"insert":"\\n"},{"insert":{"image":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\壁纸3.png"}},{"insert":"\\n"},{"insert":{"image":"C:\\\\Users\\\\Administrator\\\\Downloads\\\\top_bottom_new.jpg"}},{"insert":"\\n⏰🐕😃💼\\n\\n承诺书基础上\\n\\n"},{"insert":{"at":"data6"}},{"insert":"\\n@"},{"insert":{"at":"data5"}},{"insert":"\\n\\n"}]',
-            extra: {'value': 'data3'},
+    return Consumer<ChatController>(
+        builder: (context, ChatController value, child) {
+          List<ChatMessage> chatMessages = value.getMessagesForRoom(widget.roomId);
+          return Scaffold(
+              key: _scaffoldKey,
+              backgroundColor: color,
+              appBar: AppBar(
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+                actionsPadding: EdgeInsets.zero,
+                backgroundColor: color,
+                title: Text("Saikoune"),
+                actions: [
+                  IconButton(
+                    onPressed: () {
+                      _scaffoldKey.currentState?.openEndDrawer();
+                    },
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedUserMultiple, size: 18),
+                  ),
+                  IconButton(
+                    onPressed: () {},
+                    icon: HugeIcon(
+                      icon: HugeIcons.strokeRoundedMoreHorizontal,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+              body: (){
+                if(chatMessages.isEmpty){
+                  return Center(child: Text("暂无数据"),);
+                }
+               return ListView.builder(
+                  itemCount: chatMessages.length,
+                  padding: EdgeInsets.only(left: 10.w, right: 10.w),
+                  itemBuilder: (context, index) {
+
+                    MessagePayload payload = MessagePayload(
+                      type: chatMessages[index].type.name,
+                      reverse: chatMessages[index].senderId == 'admin',
+                      content:chatMessages[index].content,
+                      extra: {'value': 'data3'},
+                    );
+
+                    return ChatMessageBubble(payload: payload);
+                  },
+                );
+              }(),
+              endDrawer: Padding(
+                padding: EdgeInsets.only(top: 50),
+                child: Drawer(
+                  surfaceTintColor: Colors.transparent,
+                  backgroundColor: color,
+                  width: 80.w,
+                  child: Center(child: Text("data")),
+                ),
+              ),
+              bottomNavigationBar: ChatInputBar(chatController: value,)
           );
-          return ChatMessageBubble(payload: payload);
-        },
-      ),
-      endDrawer: Padding(
-        padding: EdgeInsets.only(top: 50),
-        child: Drawer(
-          surfaceTintColor: Colors.transparent,
-          backgroundColor: color,
-          width: 80.w,
-          child: Center(child: Text("data")),
-        ),
-      ),
-      bottomNavigationBar: ChatInputBar()
-    );
+        });
   }
 }
 
 class ChatInputBar extends StatefulWidget {
-  const ChatInputBar({super.key});
+  final ChatController chatController;
+  const ChatInputBar({super.key, required this.chatController});
 
   @override
   State<ChatInputBar> createState() => _ChatInputBarState();
@@ -317,6 +330,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                             value.controller.document.toDelta().toJson(),
                           );
                           ChatMessage msg = value.parseDeltaToMessage();
+                          widget.chatController.addMessage("001", msg);
                           // value.parseDeltaToMessage()
                           print(json);
                           print(msg);

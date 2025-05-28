@@ -35,7 +35,7 @@ class _HomeviewState extends State<Homeview> {
                     color: color,
                     child: Padding(
                       padding: EdgeInsets.all(8),
-                      child: ChatDetail(),
+                      child: ChatDetail( roomId: '001',),
                     ),
                   ),
                 ),

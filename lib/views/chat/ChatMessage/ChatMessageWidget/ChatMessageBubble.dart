@@ -53,11 +53,11 @@ class ChatMessageBubble extends StatelessWidget {
                     backgroundColor: Colors.transparent,
                   ),
                   SizedBox(width: 4),
-                  payload.type == 'quill' ? bubble : Expanded(child: bubble),
+                  bubble
                 ];
               }
               return [
-                payload.type == 'quill' ? bubble : Expanded(child: bubble),
+                bubble,
                 SizedBox(width: 4),
                 CircleAvatar(
                   radius: 18,

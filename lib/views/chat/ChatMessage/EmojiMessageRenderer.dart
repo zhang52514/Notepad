@@ -6,8 +6,7 @@ class EmojiMessageRenderer extends AbstractMessageRenderer {
 
   @override
   Widget render(BuildContext context) {
-    // TODO: implement render
-    throw UnimplementedError();
+    return Text(payload.content,style: TextStyle(fontSize: 38),);
   }
 
   static void register() {

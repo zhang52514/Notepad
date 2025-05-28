@@ -1,3 +1,7 @@
+///
+/// ChatMessage 载体
+///   渲染用
+///
 class MessagePayload {
   final String type;
   final String content;

@@ -142,7 +142,7 @@ class CQController extends ChangeNotifier {
     );
 
     if(chatMsg.type == MessageType.quill){
-      chatMsg.content = jsonEncode(_controller.document.toDelta().toJson()).replaceAll("\\", "\\\\");
+      chatMsg.content = jsonEncode(_controller.document.toDelta().toJson());
       print(chatMsg.content);
     }
     return chatMsg;
