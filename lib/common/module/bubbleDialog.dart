@@ -436,6 +436,7 @@ class BubbleWidget extends StatelessWidget {
     } else if (arrowDirection == AxisDirection.right) {
       bubblePadding = EdgeInsets.only(right: arrowLength);
     }
+    ///这里加name 和 tooltip 使用什么组件合适
     return Container(
       margin: margin,
       decoration: ShapeDecoration(

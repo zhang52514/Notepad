@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:bot_toast/bot_toast.dart';
@@ -19,11 +18,13 @@ import 'package:notepad/views/chat/Components/ChatInputBar/AtUserListWidget.dart
 import 'package:notepad/views/chat/Components/ChatInputBar/QuillCustomBuild/AtBuilder.dart';
 import 'package:notepad/views/chat/Components/ChatInputBar/QuillCustomBuild/FileBuilder.dart';
 import 'package:provider/provider.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import 'Components/ChatInputBar/QuillCustomBuild/ImageBuilder.dart';
 
 class ChatDetail extends StatefulWidget {
   final String roomId;
+
   const ChatDetail({super.key, required this.roomId});
 
   @override
@@ -32,76 +33,137 @@ class ChatDetail extends StatefulWidget {
 
 class _ChatDetailState extends State<ChatDetail> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  List<ChatMessage> chatMessages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    debugPrint("ChatDetail initState");
+    final ctl = Provider.of<ChatController>(context, listen: false);
+    ctl.itemPositionsListener.itemPositions.addListener(() {
+      final positions = ctl.itemPositionsListener.itemPositions.value;
+
+      if (positions.isEmpty) return; // 防止空列表报错
+
+      final minIndex = positions
+          .where((item) => item.itemLeadingEdge >= 0)
+          .fold<int?>(
+            null,
+            (min, item) => min == null || item.index < min ? item.index : min,
+          );
+
+      final maxIndex = positions.fold<int?>(
+        null,
+        (max, item) => max == null || item.index > max ? item.index : max,
+      );
+
+      debugPrint('Visible range: ${minIndex ?? "?"} ~ ${maxIndex ?? "?"}');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     Color? color =
         ThemeUtil.isDarkMode(context) ? Color(0xFF292929) : Colors.white;
     return Consumer<ChatController>(
-        builder: (context, ChatController value, child) {
-          List<ChatMessage> chatMessages = value.getMessagesForRoom(widget.roomId);
-          return Scaffold(
-              key: _scaffoldKey,
-              backgroundColor: color,
-              appBar: AppBar(
-                elevation: 0,
-                surfaceTintColor: Colors.transparent,
-                actionsPadding: EdgeInsets.zero,
-                backgroundColor: color,
-                title: Text("Saikoune"),
-                actions: [
-                  IconButton(
-                    onPressed: () {
-                      _scaffoldKey.currentState?.openEndDrawer();
-                    },
-                    icon: HugeIcon(icon: HugeIcons.strokeRoundedUserMultiple, size: 18),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: HugeIcon(
-                      icon: HugeIcons.strokeRoundedMoreHorizontal,
-                      size: 18,
-                    ),
-                  ),
-                ],
-              ),
-              body: (){
-                if(chatMessages.isEmpty){
-                  return Center(child: Text("暂无数据"),);
-                }
-               return ListView.builder(
-                  itemCount: chatMessages.length,
-                  padding: EdgeInsets.only(left: 10.w, right: 10.w),
-                  itemBuilder: (context, index) {
-
-                    MessagePayload payload = MessagePayload(
-                      type: chatMessages[index].type.name,
-                      reverse: chatMessages[index].senderId == 'admin',
-                      content:chatMessages[index].content,
-                      extra: {'value': 'data3'},
-                    );
-
-                    return ChatMessageBubble(payload: payload);
-                  },
-                );
-              }(),
-              endDrawer: Padding(
-                padding: EdgeInsets.only(top: 50),
-                child: Drawer(
-                  surfaceTintColor: Colors.transparent,
-                  backgroundColor: color,
-                  width: 80.w,
-                  child: Center(child: Text("data")),
+      builder: (context, ChatController value, child) {
+        chatMessages = value.getMessagesForRoom(widget.roomId);
+        return Scaffold(
+          key: _scaffoldKey,
+          backgroundColor: color,
+          appBar: AppBar(
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            actionsPadding: EdgeInsets.zero,
+            backgroundColor: color,
+            title: Text("Saikoune"),
+            actions: [
+              IconButton(
+                onPressed: () {
+                  _scaffoldKey.currentState?.openEndDrawer();
+                },
+                icon: HugeIcon(
+                  icon: HugeIcons.strokeRoundedUserMultiple,
+                  size: 18,
                 ),
               ),
-              bottomNavigationBar: ChatInputBar(chatController: value,)
-          );
-        });
+              IconButton(
+                onPressed: () {},
+                icon: HugeIcon(
+                  icon: HugeIcons.strokeRoundedMoreHorizontal,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+          body: () {
+            if (chatMessages.isEmpty) {
+              return Center(child: Text("暂无数据"));
+            }
+            // return ListView.builder(
+            //   reverse: true,
+            //   itemCount: chatMessages.length,
+            //   padding: EdgeInsets.only(left: 10.w, right: 10.w),
+            //   itemBuilder: (context, index) {
+            //     final msg = chatMessages[index];
+            //
+            //     MessagePayload payload = MessagePayload(
+            //       type: msg.type.name,
+            //       reverse: msg.senderId == 'admin',
+            //       content: msg.content,
+            //       extra: {'value': 'data3'},
+            //     );
+            //
+            //     return ChatMessageBubble(payload: payload);
+            //   },
+            // );
+            return ScrollablePositionedList.builder(
+              reverse: true,
+              padding: EdgeInsets.only(left: 10.w, right: 10.w),
+              itemCount: chatMessages.length,
+              itemBuilder: (context, index) {
+                final msg = chatMessages[index];
+
+                MessagePayload payload = MessagePayload(
+                  name: msg.senderId == 'admin' ? 'Saikoune' : 'admin',
+                  type: msg.type.name,
+                  reverse: index % 2 == 0,
+                  content: msg.content,
+                  extra: {'value': 'data3'},
+                  time: index % 2 == 0 ? '13:23' : '13:56',
+                );
+
+                return ChatMessageBubble(payload: payload);
+              },
+              itemScrollController: value.itemScrollController,
+              itemPositionsListener: value.itemPositionsListener,
+            );
+          }(),
+          // floatingActionButton: FloatingActionButton(
+          //   onPressed: () {
+          //     value.itemScrollController.jumpTo(index: 180);
+          //   },
+          //   child: Text("80"),
+          // ),
+          endDrawer: Padding(
+            padding: EdgeInsets.only(top: 50),
+            child: Drawer(
+              surfaceTintColor: Colors.transparent,
+              backgroundColor: color,
+              width: 80.w,
+              child: Center(child: Text("data")),
+            ),
+          ),
+          bottomNavigationBar: ChatInputBar(chatController: value),
+        );
+      },
+    );
   }
 }
 
 class ChatInputBar extends StatefulWidget {
   final ChatController chatController;
+
   const ChatInputBar({super.key, required this.chatController});
 
   @override
@@ -116,6 +178,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
   void initState() {
     super.initState();
     Provider.of<CQController>(context, listen: false).setupAtMentionListener();
+  }
+
+  void toggleAttribute(QuillController controller, Attribute attr) {
+    final attrs = controller.getSelectionStyle().attributes;
+    final has = attrs.containsKey(attr.key);
+    controller.formatSelection(has ? Attribute.clone(attr, null) : attr);
   }
 
   @override
@@ -140,7 +208,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
         }
 
         return Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12.w,vertical: 4.h),
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
           child: Container(
             decoration: BoxDecoration(
               border: Border.all(
@@ -155,6 +223,61 @@ class _ChatInputBarState extends State<ChatInputBar> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Wrap(
+                    children: [
+                      IconButton(
+                        tooltip: "加粗",
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          toggleAttribute(value.controller, Attribute.bold);
+                        },
+                        icon: HugeIcon(
+                          icon: HugeIcons.strokeRoundedTextBold,
+                          size: 14,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: "斜体",
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          toggleAttribute(value.controller, Attribute.bold);
+                        },
+                        icon: HugeIcon(
+                          icon: HugeIcons.strokeRoundedTextBold,
+                          size: 14,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: "下划线",
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          toggleAttribute(value.controller, Attribute.bold);
+                        },
+                        icon: HugeIcon(
+                          icon: HugeIcons.strokeRoundedTextBold,
+                          size: 14,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: "删除线",
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          toggleAttribute(value.controller, Attribute.bold);
+                        },
+                        icon: HugeIcon(
+                          icon: HugeIcons.strokeRoundedTextBold,
+                          size: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 Container(
                   constraints: BoxConstraints(maxHeight: 200.h),
                   child: QuillEditor.basic(
@@ -170,6 +293,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       customStyles: DefaultStyles(
                         paragraph: DefaultTextBlockStyle(
                           TextStyle(
+                            fontFamily: 'HarmonyOS',
                             fontSize: 14,
                             color:
                                 ThemeUtil.isDarkMode(context)
@@ -193,7 +317,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       scrollable: true,
                       placeholder: "输入消息",
                       autoFocus: true,
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(8),
                       embedBuilders: [
                         ImageBuilder(),
                         AtBuilder(),
@@ -326,14 +450,13 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         padding: EdgeInsets.zero,
                         visualDensity: VisualDensity.compact,
                         onPressed: () {
-                          final String json = jsonEncode(
-                            value.controller.document.toDelta().toJson(),
-                          );
+                          // final String json = jsonEncode(
+                          //   value.controller.document.toDelta().toJson(),
+                          // );
+
                           ChatMessage msg = value.parseDeltaToMessage();
                           widget.chatController.addMessage("001", msg);
-                          // value.parseDeltaToMessage()
-                          print(json);
-                          print(msg);
+                          value.controller.document = Document();
                         },
                         icon: HugeIcon(
                           icon: HugeIcons.strokeRoundedSent,

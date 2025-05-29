@@ -1,29 +1,33 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../common/domain/ChatMessage.dart';
 
 class ChatController extends ChangeNotifier {
-
   ///
   /// 核心 消息列表
   ///
 
-  final Map<String,List<ChatMessage>> _roomMessages  = {};
+  final Map<String, List<ChatMessage>> _roomMessages = {};
+
   /// 获取某个房间的所有消息列表
   /// 注意：返回的是副本，避免外部直接修改导致UI不更新
   List<ChatMessage> getMessagesForRoom(String roomId) {
-    return _roomMessages[roomId] ?? [];
+    return _roomMessages[roomId]?.reversed.toList() ?? [];
   }
+
   // 添加一条新消息到指定房间
   void addMessage(String roomId, ChatMessage message) {
     if (!_roomMessages.containsKey(roomId)) {
       _roomMessages[roomId] = []; // 如果房间不存在，则创建一个新的消息列表
     }
+    // 添加消息
     _roomMessages[roomId]!.add(message);
-    notifyListeners(); // 通知所有监听者数据已更新
+    notifyListeners();
+
+    scrollToBottom();
   }
 
   // 批量添加消息到指定房间 (例如：从历史记录加载)
@@ -80,9 +84,27 @@ class ChatController extends ChangeNotifier {
   // - 处理消息发送失败/成功的状态
   // - 获取未读消息计数
 
-
   ///ListView 控制器 左侧列表
-  final ScrollController scrollController = ScrollController();
+  final ScrollController scrollChatListController = ScrollController();
+
+  final ItemScrollController itemScrollController = ItemScrollController();
+    final ItemPositionsListener itemPositionsListener =  ItemPositionsListener.create();
+  void scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      itemScrollController.scrollTo(
+        index: 0,
+        duration: Duration(milliseconds: 500),
+        curve: Curves.easeInOutCubic,
+      );
+      // if (itemScrollController.scrollTo) {
+      //   itemScrollController.scrollTo(
+      //     0.0,
+      //     duration: const Duration(milliseconds: 300),
+      //     curve: Curves.easeOut,
+      //   );
+      // }
+    });
+  }
 
   ///是否滚动
   bool _isScrolling = false;
@@ -95,7 +117,7 @@ class ChatController extends ChangeNotifier {
 
   ChatController() {
     ///监听滚动
-    scrollController.addListener(_onScroll);
+    scrollChatListController.addListener(_onScroll);
   }
 
   void _onScroll() {
@@ -114,6 +136,7 @@ class ChatController extends ChangeNotifier {
   ///ListTile选择索引
   /// 选择切换 ChatDetail
   int _selectedIndex = -1;
+
   get selectIndex => _selectedIndex;
 
   void setSelectIndex(int index) {
@@ -121,11 +144,9 @@ class ChatController extends ChangeNotifier {
     notifyListeners();
   }
 
-
-
   @override
   void dispose() {
-    scrollController.dispose();
+    scrollChatListController.dispose();
     _scrollStopTimer?.cancel();
     super.dispose();
   }

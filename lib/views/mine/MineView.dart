@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
 import '../../common/utils/ThemeUtil.dart';
-import '../chat/Components/ChatInputBar/QuillCustomBuild/AtBuilder.dart';
-import '../chat/Components/ChatInputBar/QuillCustomBuild/FileBuilder.dart';
-import '../chat/Components/ChatInputBar/QuillCustomBuild/ImageBuilder.dart';
 
 class MineView extends StatefulWidget {
   const MineView({super.key});

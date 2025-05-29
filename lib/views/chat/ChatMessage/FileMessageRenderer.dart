@@ -6,7 +6,7 @@ class FileMessageRenderer extends AbstractMessageRenderer {
 
   @override
   Widget render(BuildContext context) {
-    throw UnimplementedError();
+    return Text("文件");
   }
 
   static void register() {

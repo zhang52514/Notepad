@@ -35,7 +35,7 @@ class _ChatlistState extends State<Chatlist> {
         ),
         Expanded(
           child: ListView.builder(
-            controller: widget.value.scrollController,
+            controller: widget.value.scrollChatListController,
             itemCount: 50,
             itemBuilder:
                 (context, index) => Padding(

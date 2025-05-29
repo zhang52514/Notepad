@@ -29,31 +29,24 @@ class QuillMessageRenderer extends AbstractMessageRenderer {
         ),
       );
     }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IntrinsicWidth(
-          child: QuillEditor.basic(
-            config: QuillEditorConfig(
-              showCursor: false,
-              textSelectionThemeData: TextSelectionThemeData(
-                selectionColor: Colors.blue.withValues(alpha: 0.5),
-              ),
-              customStyles: DefaultStyles(
-                paragraph: DefaultTextBlockStyle(
-                  TextStyle(fontSize: 14, color: Colors.white),
-                  HorizontalSpacing(0, 0),
-                  VerticalSpacing(6, 0),
-                  VerticalSpacing(6, 0),
-                  null,
-                ),
-              ),
-              embedBuilders: [ImageBuilder(), AtBuilder(), FileBuilder()],
-            ),
-            controller: _controller,
+    return QuillEditor.basic(
+      config: QuillEditorConfig(
+        showCursor: false,
+        textSelectionThemeData: TextSelectionThemeData(
+          selectionColor: Colors.blue.withValues(alpha: 0.5),
+        ),
+        customStyles: DefaultStyles(
+          paragraph: DefaultTextBlockStyle(
+            TextStyle(fontSize: 14, color: Colors.white),
+            HorizontalSpacing(0, 0),
+            VerticalSpacing(6, 0),
+            VerticalSpacing(6, 0),
+            null,
           ),
         ),
-      ],
+        embedBuilders: [ImageBuilder(), AtBuilder(), FileBuilder()],
+      ),
+      controller: _controller,
     );
   }
 

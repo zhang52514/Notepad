@@ -39,7 +39,7 @@ class MainController extends ChangeNotifier {
 
   //页面
   final List<Widget> views = [
-    Homeview(),
+    HomeView(),
     ContactView(),
     NotPadView(),
     FindView(),

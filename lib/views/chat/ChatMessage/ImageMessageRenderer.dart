@@ -6,7 +6,7 @@ class ImageMessageRenderer extends AbstractMessageRenderer {
 
   @override
   Widget render(BuildContext context) {
-    throw UnimplementedError();
+    return Text("tuxiang");
   }
 
   static void register() {

@@ -1,16 +1,20 @@
+
 ///
 /// ChatMessage 载体
 ///   渲染用
 ///
 class MessagePayload {
+  final String name;
+  final String time;
   final String type;
   final String content;
   final bool reverse;
-
   // 可选的附加数据（用于特定渲染器）
   final Map<String, dynamic> extra;
 
-  MessagePayload({
+  MessagePayload( {
+    required this.name,
+    required this.time,
     required this.type,
     required this.content,
     required this.reverse,

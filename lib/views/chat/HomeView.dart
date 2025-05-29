@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/views/chat/ChatDetail.dart';
-import 'package:notepad/views/chat/ChatList.dart';
 import 'package:provider/provider.dart';
 
-class Homeview extends StatefulWidget {
-  const Homeview({super.key});
+class HomeView extends StatefulWidget {
+  const HomeView({super.key});
 
   @override
-  State<Homeview> createState() => _HomeviewState();
+  State<HomeView> createState() => _HomeViewState();
 }
 
-class _HomeviewState extends State<Homeview> {
+class _HomeViewState extends State<HomeView> {
   @override
   Widget build(BuildContext context) {
     Color? color =
@@ -23,11 +21,11 @@ class _HomeviewState extends State<Homeview> {
           (context, ChatController value, child) => Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
-                width: 95.w,
-                height: double.infinity,
-                child: Chatlist(value: value),
-              ),
+              // SizedBox(
+              //   width: 95.w,
+              //   height: double.infinity,
+              //   child: Chatlist(value: value),
+              // ),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.all(2),

@@ -93,11 +93,13 @@ class CQController extends ChangeNotifier {
     final Map<String, dynamic> metadata = {};
     bool isEmoji = false;
     for (final op in ops) {
+      ///纯文本消息
       if (op.data is String) {
+        ///是否是emoji
         isEmoji = isPureEmoji(op.data.toString());
-        print(isEmoji);
         buffer.write(op.data);
       } else if (op.data is Map) {
+        ///嵌入组件 image
         final embedded = op.data as Map;
         if (embedded.containsKey('image')) {
           attachments.add(
@@ -108,7 +110,7 @@ class CQController extends ChangeNotifier {
               size: 12563,
             ),
           );
-        } else if (embedded.containsKey('file')) {
+        } else if (embedded.containsKey('file')) { ///嵌入组件 file
           attachments.add(
             Attachment(
               url: embedded['file'],
@@ -117,15 +119,15 @@ class CQController extends ChangeNotifier {
               size: 122153,
             ),
           );
-        } else if (embedded.containsKey('at')) {
+        } else if (embedded.containsKey('at')) { ///嵌入组件 @组件
           metadata["at"] = '@${embedded['at']}';
         }
       }
     }
 
    final chatMsg= ChatMessage(
-      messageId: 'uuid-xxxx',
-      senderId: 'user_1',
+      messageId: DateTime.now().millisecondsSinceEpoch.toString(),
+      senderId: 'admin',
       receiverId: 'user_2',
       content: buffer.toString().trim(),
       status: MessageStatus.sent,
