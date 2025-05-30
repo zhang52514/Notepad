@@ -7,6 +7,7 @@ import 'package:flutter_quill/quill_delta.dart';
 import '../common/domain/ChatMessage.dart';
 
 class CQController extends ChangeNotifier {
+  ///Quill 控制器
   final QuillController _controller = QuillController.basic();
 
   QuillController get controller => _controller;
@@ -84,6 +85,13 @@ class CQController extends ChangeNotifier {
     });
   }
 
+  bool showQuillButtons = false;
+
+  void setQuillButtons() {
+    showQuillButtons = !showQuillButtons;
+    notifyListeners();
+  }
+
   ///
   /// 解析富文本到消息
   ChatMessage parseDeltaToMessage() {
@@ -110,7 +118,8 @@ class CQController extends ChangeNotifier {
               size: 12563,
             ),
           );
-        } else if (embedded.containsKey('file')) { ///嵌入组件 file
+        } else if (embedded.containsKey('file')) {
+          ///嵌入组件 file
           attachments.add(
             Attachment(
               url: embedded['file'],
@@ -119,31 +128,34 @@ class CQController extends ChangeNotifier {
               size: 122153,
             ),
           );
-        } else if (embedded.containsKey('at')) { ///嵌入组件 @组件
+        } else if (embedded.containsKey('at')) {
+          ///嵌入组件 @组件
           metadata["at"] = '@${embedded['at']}';
         }
       }
     }
 
-   final chatMsg= ChatMessage(
+    final chatMsg = ChatMessage(
       messageId: DateTime.now().millisecondsSinceEpoch.toString(),
       senderId: 'admin',
       receiverId: 'user_2',
       content: buffer.toString().trim(),
       status: MessageStatus.sent,
       type:
-      attachments.isEmpty
-          ? isEmoji
-          ? MessageType.emoji
-          : MessageType.text
-          : (buffer.toString().trim().isEmpty ? MessageType.file : MessageType.quill),
+          attachments.isEmpty
+              ? isEmoji
+                  ? MessageType.emoji
+                  : MessageType.text
+              : (buffer.toString().trim().isEmpty
+                  ? MessageType.file
+                  : MessageType.quill),
       attachments: attachments,
       roomId: 'room_1',
       read: [],
       metadata: metadata,
     );
 
-    if(chatMsg.type == MessageType.quill){
+    if (chatMsg.type == MessageType.quill) {
       chatMsg.content = jsonEncode(_controller.document.toDelta().toJson());
       print(chatMsg.content);
     }

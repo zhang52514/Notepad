@@ -1,6 +1,8 @@
 
+
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:notepad/common/module/AnoToast.dart';
 
 class HomeIndex extends StatefulWidget {
   const HomeIndex({super.key});
@@ -145,8 +147,7 @@ class _HomeIndexState extends State<HomeIndex> {
                     iconSize: 12,
                     iconTheme: QuillIconTheme(iconButtonSelectedData: iconData),
                     customOnPressedCallback: (ctl, isBg) async {
-                    
-                    
+                      AnoToast.showWidget(context, child: buildColorsWidget(ctl,(){},true));
                     },
                   ),
                   controller: _controller,
@@ -422,9 +423,7 @@ class _HomeIndexState extends State<HomeIndex> {
                       ? const BackgroundAttribute(null)
                       : const ColorAttribute(null),
                 );
-                if (onCancel != null) {
-                  onCancel();
-                }
+                onCancel?.call();
               },
               dense: true,
             ),
@@ -449,9 +448,7 @@ class _HomeIndexState extends State<HomeIndex> {
                                 ? BackgroundAttribute(hex)
                                 : ColorAttribute(hex),
                           );
-                          if (onCancel != null) {
-                            onCancel();
-                          }
+                          onCancel?.call();
                         },
                         child: Container(
                           width: 20,

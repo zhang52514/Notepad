@@ -26,6 +26,7 @@ class ChatMessageBubble extends StatelessWidget {
                   : CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
           children: [
+            ///  消息时间 + 名称
             Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,15 +36,21 @@ class ChatMessageBubble extends StatelessWidget {
                   TextSpan(
                     style: TextStyle(fontSize: 11, color: Colors.grey),
                     children: [
-                      TextSpan(text: payload.reverse?payload.name:payload.time),
+                      TextSpan(
+                        text: payload.reverse ? payload.name : payload.time,
+                      ),
                       TextSpan(text: "  "),
-                      TextSpan(text: payload.reverse?payload.time:payload.name),
+                      TextSpan(
+                        text: payload.reverse ? payload.time : payload.name,
+                      ),
                     ],
                   ),
                 ),
                 if (!payload.reverse) ...[SizedBox(width: 35)],
               ],
             ),
+
+            ///消息气泡框
             Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,26 +62,32 @@ class ChatMessageBubble extends StatelessWidget {
                       maxWidth: MediaQuery.of(context).size.width * 0.5,
                     ),
                     child: IntrinsicWidth(
-                      child: BubbleWidget(
-                        arrowDirection:
-                            payload.reverse
-                                ? AxisDirection.left
-                                : AxisDirection.right,
-                        arrowOffset: 22,
-                        arrowLength: 8,
-                        arrowRadius: 4,
-                        arrowWidth: 14,
-                        padding: const EdgeInsets.all(8),
-                        borderRadius: BorderRadius.circular(4),
-                        backgroundColor:
-                            !payload.reverse
-                                ? Colors.indigo
-                                : ThemeUtil.isDarkMode(context)
-                                ? Colors.grey.shade600
-                                : Colors.grey.shade300,
-                        contentBuilder:
-                            (context) => buildMessageWidget(payload, context),
-                      ),
+                      child: () {
+                        if (payload.type == 'quill' || payload.type == 'text') {
+                          return BubbleWidget(
+                            arrowDirection:
+                                payload.reverse
+                                    ? AxisDirection.left
+                                    : AxisDirection.right,
+                            arrowOffset: 22,
+                            arrowLength: 8,
+                            arrowRadius: 4,
+                            arrowWidth: 14,
+                            padding: const EdgeInsets.all(8),
+                            borderRadius: BorderRadius.circular(4),
+                            backgroundColor:
+                                !payload.reverse
+                                    ? Colors.indigo
+                                    : ThemeUtil.isDarkMode(context)
+                                    ? Colors.grey.shade600
+                                    : Colors.grey.shade300,
+                            contentBuilder:
+                                (context) =>
+                                    buildMessageWidget(payload, context),
+                          );
+                        }
+                        return buildMessageWidget(payload, context);
+                      }(),
                     ),
                   ),
                 ),

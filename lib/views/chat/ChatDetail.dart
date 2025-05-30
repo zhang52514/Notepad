@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:notepad/common/domain/ChatMessage.dart';
 import 'package:notepad/common/module/AnoToast.dart';
+import 'package:notepad/common/module/ColorsBox.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/controller/CQController.dart';
 import 'package:notepad/controller/ChatController.dart';
@@ -180,10 +181,203 @@ class _ChatInputBarState extends State<ChatInputBar> {
     Provider.of<CQController>(context, listen: false).setupAtMentionListener();
   }
 
+  ///toggle attribute
   void toggleAttribute(QuillController controller, Attribute attr) {
     final attrs = controller.getSelectionStyle().attributes;
     final has = attrs.containsKey(attr.key);
     controller.formatSelection(has ? Attribute.clone(attr, null) : attr);
+  }
+
+  ///Clear all attributes
+  void clearAttributes(QuillController controller) {
+    final attributes = <Attribute>{};
+    for (final style in controller.getAllSelectionStyles()) {
+      for (final attr in style.attributes.values) {
+        attributes.add(attr);
+      }
+    }
+    for (final attribute in attributes) {
+      controller.formatSelection(Attribute.clone(attribute, null));
+    }
+  }
+
+  ///quill buttons
+  Widget quillButtons(QuillController controller) {
+    Color color =
+        ThemeUtil.isDarkMode(context) ? Colors.grey.shade600 : Colors.white;
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: "加粗",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () => toggleAttribute(controller, Attribute.bold),
+            icon: HugeIcon(icon: HugeIcons.strokeRoundedTextBold, size: 14),
+          ),
+          IconButton(
+            tooltip: "斜体",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () {
+              toggleAttribute(controller, Attribute.italic);
+            },
+            icon: HugeIcon(icon: HugeIcons.strokeRoundedTextItalic, size: 14),
+          ),
+          IconButton(
+            tooltip: "下划线",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () => toggleAttribute(controller, Attribute.underline),
+            icon: HugeIcon(
+              icon: HugeIcons.strokeRoundedTextUnderline,
+              size: 14,
+            ),
+          ),
+          IconButton(
+            tooltip: "删除线",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed:
+                () => toggleAttribute(controller, Attribute.strikeThrough),
+            icon: HugeIcon(
+              icon: HugeIcons.strokeRoundedTextStrikethrough,
+              size: 14,
+            ),
+          ),
+          IconButton(
+            tooltip: "清除格式",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () => clearAttributes(controller),
+            icon: HugeIcon(icon: HugeIcons.strokeRoundedTextClear, size: 14),
+          ),
+          Builder(
+            builder: (context) {
+              return IconButton(
+                tooltip: "文字颜色",
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                onPressed: () {
+                  Function? onCancel;
+                  onCancel = AnoToast.showWidget(
+                    context,
+                    child: ColorsBox.buildColorsWidget((hex) {
+                      controller.formatSelection(ColorAttribute(hex));
+                      onCancel?.call();
+                    }, color),
+                  );
+                },
+                icon: HugeIcon(
+                  icon: HugeIcons.strokeRoundedTextColor,
+                  size: 14,
+                ),
+              );
+            },
+          ),
+          Builder(
+            builder: (context) {
+              return IconButton(
+                tooltip: "背景颜色",
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                onPressed: () {
+                  Function? onCancel;
+                  onCancel = AnoToast.showWidget(
+                    context,
+                    child: ColorsBox.buildColorsWidget((hex) {
+                      controller.formatSelection(BackgroundAttribute(hex));
+                      onCancel?.call();
+                    }, color),
+                  );
+                },
+                icon: HugeIcon(
+                  icon: HugeIcons.strokeRoundedBackground,
+                  size: 14,
+                ),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: "左对齐",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed:
+                () => toggleAttribute(controller, Attribute.leftAlignment),
+            icon: HugeIcon(
+              icon: HugeIcons.strokeRoundedTextAlignLeft,
+              size: 14,
+            ),
+          ),
+          IconButton(
+            tooltip: "居中对齐",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed:
+                () => toggleAttribute(controller, Attribute.centerAlignment),
+            icon: HugeIcon(
+              icon: HugeIcons.strokeRoundedTextAlignCenter,
+              size: 14,
+            ),
+          ),
+          IconButton(
+            tooltip: "右对齐",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed:
+                () => toggleAttribute(controller, Attribute.rightAlignment),
+            icon: HugeIcon(
+              icon: HugeIcons.strokeRoundedTextAlignRight,
+              size: 14,
+            ),
+          ),
+          IconButton(
+            tooltip: "引用",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () => toggleAttribute(controller, Attribute.blockQuote),
+            icon: HugeIcon(icon: HugeIcons.strokeRoundedQuoteDown, size: 14),
+          ),
+          IconButton(
+            tooltip: "代码块",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () => toggleAttribute(controller, Attribute.codeBlock),
+            icon: HugeIcon(icon: HugeIcons.strokeRoundedSourceCode, size: 14),
+          ),
+          IconButton(
+            tooltip: "无序列表",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () => toggleAttribute(controller, Attribute.ul),
+            icon: HugeIcon(
+              icon: HugeIcons.strokeRoundedLeftToRightListBullet,
+              size: 14,
+            ),
+          ),
+          IconButton(
+            tooltip: "有序列表",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () => toggleAttribute(controller, Attribute.ol),
+            icon: HugeIcon(
+              icon: HugeIcons.strokeRoundedLeftToRightListNumber,
+              size: 14,
+            ),
+          ),
+          IconButton(
+            tooltip: "插入链接",
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () => toggleAttribute(controller, Attribute.link),
+            icon: HugeIcon(icon: HugeIcons.strokeRoundedLink01, size: 14),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -192,6 +386,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
     late Function atClose;
     return Consumer<CQController>(
       builder: (context, CQController value, child) {
+        ///@列表
         if (value.showAtSuggestion) {
           atClose = AnoToast.showWidget(
             context,
@@ -207,6 +402,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
           );
         }
 
+
+
+        DefaultListBlockStyle listBlockStyle=DefaultListBlockStyle(
+          TextStyle(fontSize: 14),
+          HorizontalSpacing(0, 0),
+          VerticalSpacing(6, 0),
+          VerticalSpacing(6, 0),
+          null,
+          null,
+        );
         return Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
           child: Container(
@@ -223,61 +428,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Wrap(
-                    children: [
-                      IconButton(
-                        tooltip: "加粗",
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () {
-                          toggleAttribute(value.controller, Attribute.bold);
-                        },
-                        icon: HugeIcon(
-                          icon: HugeIcons.strokeRoundedTextBold,
-                          size: 14,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: "斜体",
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () {
-                          toggleAttribute(value.controller, Attribute.bold);
-                        },
-                        icon: HugeIcon(
-                          icon: HugeIcons.strokeRoundedTextBold,
-                          size: 14,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: "下划线",
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () {
-                          toggleAttribute(value.controller, Attribute.bold);
-                        },
-                        icon: HugeIcon(
-                          icon: HugeIcons.strokeRoundedTextBold,
-                          size: 14,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: "删除线",
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () {
-                          toggleAttribute(value.controller, Attribute.bold);
-                        },
-                        icon: HugeIcon(
-                          icon: HugeIcons.strokeRoundedTextBold,
-                          size: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                value.showQuillButtons
+                    ? quillButtons(value.controller)
+                    : SizedBox.shrink(),
+
+                /// quill editor
                 Container(
                   constraints: BoxConstraints(maxHeight: 200.h),
                   child: QuillEditor.basic(
@@ -290,7 +445,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 : Colors.indigo,
                         selectionColor: Colors.blue.withValues(alpha: 0.5),
                       ),
+
                       customStyles: DefaultStyles(
+                        leading: listBlockStyle,
+                        link: TextStyle(
+                          fontFamily: 'HarmonyOS',
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                          fontSize: 14,
+                        ),
+                        lists:listBlockStyle,
                         paragraph: DefaultTextBlockStyle(
                           TextStyle(
                             fontFamily: 'HarmonyOS',
@@ -301,8 +465,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                     : Colors.black,
                           ),
                           HorizontalSpacing(0, 0),
-                          VerticalSpacing(6, 0),
-                          VerticalSpacing(6, 0),
+                          VerticalSpacing.zero,
+                          VerticalSpacing.zero,
                           null,
                         ),
                         placeHolder: DefaultTextBlockStyle(
@@ -326,6 +490,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     ),
                   ),
                 ),
+
+                /// toolbar
                 Container(
                   height: 30.h,
                   padding: EdgeInsets.only(bottom: 4),
@@ -438,7 +604,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         tooltip: "更多格式",
                         padding: EdgeInsets.zero,
                         visualDensity: VisualDensity.compact,
-                        onPressed: () {},
+                        onPressed: () => value.setQuillButtons(),
                         icon: HugeIcon(
                           icon: HugeIcons.strokeRoundedAdd01,
                           size: 18,
