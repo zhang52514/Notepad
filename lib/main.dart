@@ -1,11 +1,13 @@
 // Created by Anoxia on 2023/10/17.
-import 'package:notepad/controller/ChatController.dart';
-import 'package:notepad/controller/MainController.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flustars/flustars.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:notepad/controller/AuthController.dart';
+import 'package:notepad/controller/ChatController.dart';
+import 'package:notepad/controller/MainController.dart';
 import 'package:notepad/views/MainNavigatorWidgetWindows.dart';
 import 'package:notepad/views/chat/ChatMessage/AudioMessageRenderer.dart';
 import 'package:notepad/views/chat/ChatMessage/EmojiMessageRenderer.dart';
@@ -19,11 +21,8 @@ import 'package:notepad/views/chat/ChatMessage/TextMessageRenderer.dart';
 import 'package:notepad/views/chat/ChatMessage/VideoMessageRenderer.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'controller/CQController.dart';
-
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,8 +75,6 @@ Future<void> main() async {
   );
 }
 
-
-
 void registerAllMessageRenderers() {
   MarkdownMessageRenderer.register();
   QuillMessageRenderer.register();
@@ -91,8 +88,6 @@ void registerAllMessageRenderers() {
   LinkMessageRenderer.register();
 }
 
-
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -104,12 +99,23 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<MainController>(
           create: (ctx) => MainController(),
         ),
-        ChangeNotifierProvider<ChatController>(
-          create: (ctx) => ChatController(),
+        ChangeNotifierProvider<AuthController>(
+          create: (ctx) => AuthController(),
         ),
-        ChangeNotifierProvider<CQController>(
-          create: (ctx) => CQController(),
+        ChangeNotifierProxyProvider<AuthController, ChatController>(
+          create:
+              (ctx) =>
+                  ChatController(authController: ctx.read<AuthController>()),
+          update: (_, authController, previous) {
+            if (previous == null) {
+              return ChatController(authController: authController);
+            } else {
+              previous.authController = authController;
+              return previous;
+            }
+          },
         ),
+        ChangeNotifierProvider<CQController>(create: (ctx) => CQController()),
       ],
       child: Consumer<MainController>(
         builder: (BuildContext context, MainController appInfo, Widget? child) {

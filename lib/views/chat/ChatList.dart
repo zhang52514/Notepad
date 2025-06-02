@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:notepad/common/module/VibratingBadge.dart';
 import 'package:notepad/common/utils/DateUtil.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
@@ -7,17 +9,19 @@ import 'package:notepad/controller/ChatController.dart';
 
 /// 聊天列表
 /// ListView + ListTile
-class Chatlist extends StatefulWidget {
+class ChatList extends StatefulWidget {
   final ChatController value;
-  const Chatlist({super.key, required this.value});
+
+  const ChatList({super.key, required this.value});
 
   @override
-  State<Chatlist> createState() => _ChatlistState();
+  State<ChatList> createState() => _ChatListState();
 }
 
-class _ChatlistState extends State<Chatlist> {
+class _ChatListState extends State<ChatList> {
   @override
   Widget build(BuildContext context) {
+    int count = widget.value.getRoomCount();
     return Column(
       children: [
         Container(
@@ -28,69 +32,80 @@ class _ChatlistState extends State<Chatlist> {
           height: 50.h,
           child: Row(
             children: [
-              Expanded(child: Text("data")),
+              Expanded(child: Text(widget.value.getMessagesForRoom().length.toString())),
               IconButton(icon: const Icon(Icons.add), onPressed: () {}),
             ],
           ),
         ),
-        Expanded(
-          child: ListView.builder(
-            controller: widget.value.scrollChatListController,
-            itemCount: 50,
-            itemBuilder:
-                (context, index) => Padding(
-                  padding: EdgeInsets.only(left: 2.w, right: 7.w),
-                  child: ListTile(
-                    visualDensity: VisualDensity.compact,
-                    key: ValueKey(widget.value.isScrolling),
-                    selected: widget.value.selectIndex == index,
-                    selectedColor: Colors.white,
-                    selectedTileColor: Colors.indigo.shade500,
-                    hoverColor:
-                        widget.value.isScrolling
-                            ? Colors.transparent
-                            : Colors.indigo.shade400,
-                    leading: CircleAvatar(
-                      radius: 18,
-                      backgroundImage: NetworkImage(
-                        'https://gd-filems.dancf.com/gaoding/cms/mcm79j/mcm79j/91878/c29d3bc0-0801-4ec7-a885-a52dedc3e5961503149.png',
-                      ),
-                      backgroundColor: Colors.transparent,
-                    ),
-                    title: Text(
-                      "项目 ${index + 1}",
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    subtitle: Text(
-                      "项目 ${index + 1} 的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述的描述",
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                      style: TextStyle(fontSize: 11),
-                    ),
-                    trailing: Column(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            DateUtil.formatTime(DateTime.now()),
-                            style: TextStyle(
-                              color:
-                                  ThemeUtil.isDarkMode(context)
-                                      ? Colors.white
-                                      : Colors.black,
-                            ),
-                          ),
+        count == 0
+            ? Expanded(child: Center(child: Text("暂无数据")))
+            : Expanded(
+              child: ListView.builder(
+                controller: widget.value.scrollChatListController,
+                itemCount: widget.value.getRoomCount(),
+                itemBuilder:
+                    (context, index) => Padding(
+                      padding: EdgeInsets.only(left: 2.w, right: 7.w),
+                      child: ListTile(
+                        visualDensity: VisualDensity.compact,
+                        key: ValueKey(widget.value.isScrolling),
+                        selected: widget.value.selectIndex == index,
+                        selectedColor: Colors.white,
+                        selectedTileColor: Colors.indigo.shade500,
+                        hoverColor:
+                            widget.value.isScrolling
+                                ? Colors.transparent
+                                : Colors.indigo.shade400,
+                        leading: _buildAvatar(widget.value.getRoom(index).roomAvatar),
+                        title: Text(
+                          widget.value.getRoom(index).roomName,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: TextStyle(fontSize: 13),
                         ),
-                        VibratingBadge(messageCount: index),
-                      ],
+                        subtitle: Text(
+                          widget.value.getRoom(index).roomLastMessage,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: TextStyle(fontSize: 11),
+                        ),
+                        trailing: Column(
+                          children: [
+                            Text(
+                              DateUtil.formatTime(widget.value.getRoom(index).roomLastMessageTime),
+                              style: TextStyle(
+                                color:
+                                    widget.value.selectIndex == index
+                                        ? Colors.white
+                                        : Colors.grey.shade900,
+                              ),
+                            ),
+                            Expanded(child: SizedBox.shrink()),
+                            VibratingBadge(messageCount: index),
+                          ],
+                        ),
+                        onTap: () => widget.value.setSelectIndex(index),
+                      ),
                     ),
-                    onTap: () => widget.value.setSelectIndex(index),
-                  ),
-                ),
-          ),
-        ),
+              ),
+            ),
       ],
+    );
+  }
+
+  Widget _buildAvatar(String url) {
+    return ClipOval(
+      child: CachedNetworkImage(
+        imageUrl: url,
+        width: 40,
+        fit: BoxFit.cover,
+        placeholder:
+            (context, url) => HugeIcon(icon: HugeIcons.strokeRoundedLoading03),
+        errorWidget:
+            (_, __, ___) => Center(
+              child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
+            ),
+      ),
     );
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/views/chat/ChatDetail.dart';
+import 'package:notepad/views/chat/ChatList.dart';
 import 'package:provider/provider.dart';
 
 class HomeView extends StatefulWidget {
@@ -21,11 +23,11 @@ class _HomeViewState extends State<HomeView> {
           (context, ChatController value, child) => Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // SizedBox(
-              //   width: 95.w,
-              //   height: double.infinity,
-              //   child: Chatlist(value: value),
-              // ),
+              SizedBox(
+                width: 95.w,
+                height: double.infinity,
+                child: ChatList(value: value),
+              ),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.all(2),
@@ -33,7 +35,7 @@ class _HomeViewState extends State<HomeView> {
                     color: color,
                     child: Padding(
                       padding: EdgeInsets.all(8),
-                      child: ChatDetail( roomId: '001',),
+                      child: ChatDetail(),
                     ),
                   ),
                 ),

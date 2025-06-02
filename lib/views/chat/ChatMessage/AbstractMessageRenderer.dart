@@ -34,6 +34,7 @@ class MessageRendererRegistry {
     } else {
       return TextMessageRenderer(
         MessagePayload(
+          avatar: '',
           name: payload.name,
           time: payload.time,
           type: 'text',

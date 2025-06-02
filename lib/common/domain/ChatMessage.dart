@@ -25,6 +25,7 @@ class ChatMessage {
     required this.metadata,
   });
 
+
   @override
   String toString() {
     return 'ChatMessage{messageId: $messageId, senderId: $senderId, receiverId: $receiverId, content: $content, status: $status, type: $type, attachments: $attachments, roomId: $roomId, read: $read, metadata: $metadata}';

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
+import 'package:notepad/controller/ChatController.dart';
 
 import '../common/domain/ChatMessage.dart';
 
@@ -94,7 +95,7 @@ class CQController extends ChangeNotifier {
 
   ///
   /// 解析富文本到消息
-  ChatMessage parseDeltaToMessage() {
+  ChatMessage parseDeltaToMessage(ChatController value) {
     final List<Operation> ops = _controller.document.toDelta().toList();
     final buffer = StringBuffer();
     final List<Attachment> attachments = [];
@@ -137,8 +138,8 @@ class CQController extends ChangeNotifier {
 
     final chatMsg = ChatMessage(
       messageId: DateTime.now().millisecondsSinceEpoch.toString(),
-      senderId: 'admin',
-      receiverId: 'user_2',
+      senderId: value.authController.currentUser!.uid,
+      receiverId: value.getRoomMembersExceptSelf(),
       content: buffer.toString().trim(),
       status: MessageStatus.sent,
       type:
@@ -150,7 +151,7 @@ class CQController extends ChangeNotifier {
                   ? MessageType.file
                   : MessageType.quill),
       attachments: attachments,
-      roomId: 'room_1',
+      roomId: value.chatRoom.roomId,
       read: [],
       metadata: metadata,
     );

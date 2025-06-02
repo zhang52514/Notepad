@@ -6,6 +6,7 @@
 class MessagePayload {
   final String name;
   final String time;
+  final String avatar;
   final String type;
   final String content;
   final bool reverse;
@@ -15,6 +16,7 @@ class MessagePayload {
   MessagePayload( {
     required this.name,
     required this.time,
+    required this.avatar,
     required this.type,
     required this.content,
     required this.reverse,

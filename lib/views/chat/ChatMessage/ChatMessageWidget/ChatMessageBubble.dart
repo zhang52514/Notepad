@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:notepad/common/module/bubbleDialog.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/views/chat/ChatMessage/AbstractMessageRenderer.dart';
@@ -55,7 +57,10 @@ class ChatMessageBubble extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (payload.reverse) ...[_buildAvatar(), SizedBox(width: 4)],
+                if (payload.reverse) ...[
+                  _buildAvatar(payload.avatar),
+                  SizedBox(width: 4),
+                ],
                 Flexible(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
@@ -91,7 +96,10 @@ class ChatMessageBubble extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (!payload.reverse) ...[SizedBox(width: 4), _buildAvatar()],
+                if (!payload.reverse) ...[
+                  SizedBox(width: 4),
+                  _buildAvatar(payload.avatar),
+                ],
               ],
             ),
           ],
@@ -100,13 +108,19 @@ class ChatMessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar() {
-    return const CircleAvatar(
-      radius: 18,
-      backgroundImage: NetworkImage(
-        'https://gd-filems.dancf.com/gaoding/cms/mcm79j/mcm79j/91878/c29d3bc0-0801-4ec7-a885-a52dedc3e5961503149.png',
+  Widget _buildAvatar(String url) {
+    return ClipOval(
+      child: CachedNetworkImage(
+        imageUrl: url,
+        width: 40,
+        fit: BoxFit.cover,
+        placeholder:
+            (context, url) => HugeIcon(icon: HugeIcons.strokeRoundedLoading03),
+        errorWidget:
+            (_, __, ___) => Center(
+              child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
+            ),
       ),
-      backgroundColor: Colors.transparent,
     );
   }
 

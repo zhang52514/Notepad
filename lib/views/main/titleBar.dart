@@ -1,20 +1,25 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/domain/ChatUser.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
+import 'package:notepad/controller/AuthController.dart';
 import 'package:notepad/controller/MainController.dart';
 import 'package:notepad/views/main/mainBody.dart';
+import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
-class Titlebar extends StatefulWidget {
+class TitleBar extends StatefulWidget {
   final String title;
-  final MainController mainctl;
-  const Titlebar({super.key, required this.title, required this.mainctl});
+  final MainController mainCtl;
+
+  const TitleBar({super.key, required this.title, required this.mainCtl});
 
   @override
-  State<Titlebar> createState() => TitlebarState();
+  State<TitleBar> createState() => TitleBarState();
 }
 
-class TitlebarState extends State<Titlebar> {
+class TitleBarState extends State<TitleBar> {
   final btnStyle = ButtonStyle(
     shape: WidgetStateProperty.all(
       RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
@@ -28,9 +33,12 @@ class TitlebarState extends State<Titlebar> {
       appBar: AppBar(
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: ThemeUtil.isDarkMode(context) ? null : Color(0xFFE6E6E9),
-        title: Text(widget.title, style: TextStyle(fontSize: 18)),
+        backgroundColor:
+            ThemeUtil.isDarkMode(context) ? null : Color(0xFFE6E6E9),
+        title: Text(widget.title, style: TextStyle(fontSize: 14)),
         actions: [
+          buildUserInfo(),
+          VerticalDivider(indent: 15, endIndent: 15),
           IconButton(
             tooltip: "最小化",
             padding: EdgeInsets.zero,
@@ -44,7 +52,7 @@ class TitlebarState extends State<Titlebar> {
             ),
             style: btnStyle,
           ),
-          widget.mainctl.extended
+          widget.mainCtl.extended
               ? IconButton(
                 tooltip: "还原",
                 padding: EdgeInsets.zero,
@@ -95,7 +103,35 @@ class TitlebarState extends State<Titlebar> {
         ],
         flexibleSpace: const DragToMoveArea(child: SizedBox.expand()),
       ),
-      body: Mainbody(mainctl: widget.mainctl),
+      body: Mainbody(mainctl: widget.mainCtl),
+    );
+  }
+
+  Widget buildUserInfo() {
+    ChatUser? user = context.read<AuthController>().currentUser;
+    if (user == null) {
+      return IconButton(
+        onPressed: null,
+        icon: HugeIcon(icon: HugeIcons.strokeRoundedUserCircle02),
+      );
+    }
+    return Builder(
+      builder: (context) {
+        return CircleAvatar(
+          radius: 18,
+          backgroundColor: Colors.transparent,
+          child: CachedNetworkImage(
+            imageUrl: user.avatarUrl,
+            placeholder:
+                (context, url) =>
+                    HugeIcon(icon: HugeIcons.strokeRoundedLoading03),
+            errorWidget:
+                (_, __, ___) => Center(
+                  child: HugeIcon(icon: HugeIcons.strokeRoundedUserCircle02),
+                ),
+          ),
+        );
+      },
     );
   }
 }

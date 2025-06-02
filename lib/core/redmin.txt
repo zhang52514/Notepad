@@ -1,0 +1,3 @@
+│   ├── websocket_service.dart       // WebSocket核心类，负责连接、重连、发送、接收
+│   ├── websocket_message.dart       // 通信协议（message结构定义）
+│   └── websocket_controller.dart    // 状态管理 + 订阅机制

@@ -1,33 +1,167 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:notepad/common/domain/ChatRoom.dart';
+import 'package:notepad/common/domain/ChatUser.dart';
+import 'package:notepad/controller/AuthController.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../common/domain/ChatMessage.dart';
+import '../core/websocket_service.dart';
 
 class ChatController extends ChangeNotifier {
   ///
-  /// 核心 消息列表
+  /// 核心
+  ///================================================================
   ///
-
+  final WebSocketService _service = WebSocketService();
+  late AuthController authController;
+  final List<ChatRoom> _chatroomList = [];
   final Map<String, List<ChatMessage>> _roomMessages = {};
+  final List<ChatUser> _users = [];
+
+  ChatController({required this.authController}) {
+    ///滚动监听
+    scrollChatListController.addListener(_onScroll);
+    _service.addListener((msg) {
+      // 根据 type 或 payload 做业务处理
+      print("收到消息: ${msg}");
+    });
+    _initData();
+  }
+
+  ///初始化数据
+  _initData() {
+    var u1 = ChatUser(
+      uid: '001',
+      nickname: 'test-02',
+      avatarUrl: 'https://img.keaitupian.cn/newupload/11/1668492556474791.jpg',
+    );
+    var u2 = ChatUser(
+      uid: '002',
+      nickname: 'text-03',
+      avatarUrl:
+          'https://c-ssl.dtstatic.com/uploads/blog/202212/18/20221218144515_64111.thumb.1000_0.jpg',
+    );
+    var u3 = ChatUser(
+      uid: '1',
+      nickname: 'admin',
+      avatarUrl:
+          'https://c-ssl.duitang.com/uploads/blog/202107/17/20210717100716_31038.jpg',
+    );
+    //模拟后端返回
+    _chatroomList.add(
+      ChatRoom(
+        roomId: 'room1',
+        roomName: '私聊测试1',
+        roomAvatar:
+            'https://img.keaitupian.cn/newupload/11/1668492556474791.jpg',
+        roomDescription: '私聊测试1描述',
+        roomLastMessage: '',
+        roomLastMessageTime: DateTime.now(),
+        roomUnreadCount: 0,
+        roomCreateTime: 1920902,
+        roomUpdateTime: 1920902,
+        roomStatus: 0,
+        roomType: 0,
+        memberIds: ["001","1"],
+      ),
+    );
+    _chatroomList.add(
+      ChatRoom(
+        roomId: 'room2',
+        roomName: '私聊测试2',
+        roomAvatar:
+            'https://c-ssl.dtstatic.com/uploads/blog/202212/18/20221218144515_64111.thumb.1000_0.jpg',
+        roomDescription: '私聊测试2描述',
+        roomLastMessage: '',
+        roomLastMessageTime: DateTime.now(),
+        roomUnreadCount: 0,
+        roomCreateTime: 1920902,
+        roomUpdateTime: 1920902,
+        roomStatus: 0,
+        roomType: 0,
+        memberIds: ["002","1"],
+      ),
+    );
+    _users.add(u1);
+    _users.add(u2);
+    _users.add(u3);
+    _chatRoom = _chatroomList[0];
+  }
+
+  ///
+  ///核心
+  ///================================================================
+
+  /// 当前房间ID
+  late ChatRoom _chatRoom;
+
+  get chatRoom => _chatRoom;
 
   /// 获取某个房间的所有消息列表
   /// 注意：返回的是副本，避免外部直接修改导致UI不更新
-  List<ChatMessage> getMessagesForRoom(String roomId) {
-    return _roomMessages[roomId]?.reversed.toList() ?? [];
+  List<ChatMessage> getMessagesForRoom() {
+    return _roomMessages[_chatRoom.roomId]?.reversed.toList() ?? [];
+  }
+
+  ///
+  /// 获取房间列表数量
+  int getRoomCount() {
+    return _chatroomList.length;
+  }
+
+  ///
+  /// 获取房间未读消息数量
+  int getRoomUnReadCount(int index) {
+    return _chatroomList[index].roomUnreadCount;
+  }
+
+  ///
+  /// 获取房间
+  ChatRoom getRoom(int index) {
+    return _chatroomList[index];
+  }
+  ///
+  /// 获取所有房间成员 除了自己
+  String getRoomMembersExceptSelf() {
+    return _chatRoom.memberIds
+        .where((memberId) => memberId != authController.currentUser!.uid)
+        .join(','); // 可以替换成你想要的分隔符，比如 '|' 或 ';'
+  }
+
+  ///
+  /// 获取用户
+  ChatUser getUser(String uid) {
+    return _users.firstWhere(
+      (u) => u.uid == uid,
+      orElse: () => ChatUser(uid: uid, nickname: '未知用户', avatarUrl: ''),
+    );
   }
 
   // 添加一条新消息到指定房间
-  void addMessage(String roomId, ChatMessage message) {
-    if (!_roomMessages.containsKey(roomId)) {
-      _roomMessages[roomId] = []; // 如果房间不存在，则创建一个新的消息列表
+  void addMessage(ChatMessage message) {
+    if (!_roomMessages.containsKey(_chatRoom.roomId)) {
+      _roomMessages[_chatRoom.roomId] = []; // 如果房间不存在，则创建一个新的消息列表
     }
     // 添加消息
-    _roomMessages[roomId]!.add(message);
-    notifyListeners();
+    _roomMessages[_chatRoom.roomId]!.add(message);
+    //房间添加最后一条消息
+    _chatRoom.roomLastMessage = message.content;
 
-    scrollToBottom();
+    if (_roomMessages[_chatRoom.roomId]!.length > 4) {
+      scrollToBottom();
+    }
+    _service.send({
+      "cmd": "chat",
+      "token": authController.token,
+      "senderId": message.senderId,
+      "receiverId": message.receiverId,
+      "content": message.content,
+      "type": message.type.name,
+      "roomId": _chatRoom.roomId,
+    });
+    notifyListeners();
   }
 
   // 批量添加消息到指定房间 (例如：从历史记录加载)
@@ -88,21 +222,18 @@ class ChatController extends ChangeNotifier {
   final ScrollController scrollChatListController = ScrollController();
 
   final ItemScrollController itemScrollController = ItemScrollController();
-    final ItemPositionsListener itemPositionsListener =  ItemPositionsListener.create();
+  final ItemPositionsListener itemPositionsListener =
+      ItemPositionsListener.create();
+
   void scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      itemScrollController.scrollTo(
-        index: 0,
-        duration: Duration(milliseconds: 500),
-        curve: Curves.easeInOutCubic,
-      );
-      // if (itemScrollController.scrollTo) {
-      //   itemScrollController.scrollTo(
-      //     0.0,
-      //     duration: const Duration(milliseconds: 300),
-      //     curve: Curves.easeOut,
-      //   );
-      // }
+      if (itemScrollController.isAttached) {
+        itemScrollController.scrollTo(
+          index: 0,
+          duration: Duration(milliseconds: 500),
+          curve: Curves.easeInOutCubic,
+        );
+      }
     });
   }
 
@@ -114,11 +245,6 @@ class ChatController extends ChangeNotifier {
   Timer? _scrollStopTimer;
 
   bool get isScrolling => _isScrolling;
-
-  ChatController() {
-    ///监听滚动
-    scrollChatListController.addListener(_onScroll);
-  }
 
   void _onScroll() {
     if (!_isScrolling) {
@@ -139,8 +265,11 @@ class ChatController extends ChangeNotifier {
 
   get selectIndex => _selectedIndex;
 
+  ///切换左侧列表索引
+  ///   选择切换 ChatDetail
   void setSelectIndex(int index) {
     _selectedIndex = index;
+    _chatRoom = getRoom(index);
     notifyListeners();
   }
 
