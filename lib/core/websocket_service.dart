@@ -61,6 +61,11 @@ class WebSocketService {
     }
   }
 
+  ///登录
+  void auth(String name, String pwd) {
+    send({"cmd": "auth", "userName": name, "userPwd": pwd});
+  }
+
   void send(Map<String, dynamic> message) {
     if (_status == WebSocketConnectionStatus.connected) {
       _channel?.sink.add(json.encode(message));

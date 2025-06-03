@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/module/SingleCloseView.dart';
 import 'package:notepad/controller/AuthController.dart';
 import 'package:notepad/controller/MainController.dart';
 import 'package:notepad/views/main/Sidebar.dart';
@@ -100,53 +100,17 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
   @override
   Widget build(BuildContext context) {
     if (networkResult == ConnectivityResult.none) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          DragToMoveArea(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  tooltip: "关闭",
-                  padding: EdgeInsets.zero,
-                  hoverColor: Colors.red,
-                  onPressed: () {
-                    windowManager.close();
-                  },
-                  style: ButtonStyle(
-                    shape: WidgetStateProperty.all(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                    ),
-                    foregroundColor: WidgetStateProperty.resolveWith((
-                      states,
-                    ) {
-                      if (states.contains(WidgetState.hovered)) {
-                        return Colors.white;
-                      }
-                      return null;
-                    }),
-                  ),
-                  icon: HugeIcon(
-                    icon: HugeIcons.strokeRoundedCancel01,
-                    size: 18,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(child: Center(child: Text("网络异常，请检查网络连接！"))),
-        ],
-      );
+      return SingleCloseView(child: Center(child: Text("网络异常，请检查网络连接！")));
     }
 
     var mainController = context.watch<MainController>();
     var authController = context.watch<AuthController>();
 
-    if(authController.currentUser == null){
+    if (authController.isLoading) {
+      return SingleCloseView(child: Center(child: Text("登录中...")));
+    }
+
+    if (authController.currentUser == null) {
       return const AuthLogin();
     }
     return Row(

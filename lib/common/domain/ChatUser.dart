@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 class ChatUser {
   // CREATE TABLE `user` (
   // `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
@@ -16,7 +18,7 @@ class ChatUser {
   // PRIMARY KEY (`id`),
   // UNIQUE KEY `username` (`username`)
   // ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='IM 用户表';
-  String uid;
+  int uid;
   String username;
   String nickname;
   String password;
@@ -42,9 +44,9 @@ class ChatUser {
     return ChatUser(
       uid: json['id'] ?? '',
       username: json['username'] ?? '',
-      nickname: json['nickname'] ?? '',
+      nickname: json['name'] ?? '',
       password: json['password'] ?? '',
-      avatarUrl: json['avatar_url'] ?? '',
+      avatarUrl: json['avatarUrl'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
       status: json['status']?.toString() ?? '',

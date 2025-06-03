@@ -2,8 +2,8 @@
 
 class ChatMessage {
   String messageId;
-  String senderId;
-  String receiverId;
+  int senderId;
+  int receiverId;
   String content;
   MessageStatus status;
   MessageType type;

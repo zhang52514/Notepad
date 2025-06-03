@@ -7,6 +7,7 @@ import 'package:notepad/controller/AuthController.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../common/domain/ChatMessage.dart';
+import '../common/module/AnoToast.dart';
 import '../core/websocket_service.dart';
 
 class ChatController extends ChangeNotifier {
@@ -24,8 +25,11 @@ class ChatController extends ChangeNotifier {
     ///滚动监听
     scrollChatListController.addListener(_onScroll);
     _service.addListener((msg) {
-      // 根据 type 或 payload 做业务处理
-      print("收到消息: ${msg}");
+      print("Chat new Message:$msg");
+      if (msg.code == "200" && msg.data != null) {
+      }else{
+        AnoToast.showToast(msg.message,type: ToastType.error);
+      }
     });
     _initData();
   }
@@ -33,18 +37,18 @@ class ChatController extends ChangeNotifier {
   ///初始化数据
   _initData() {
     var u1 = ChatUser(
-      uid: '001',
+      uid: 101,
       nickname: 'test-02',
       avatarUrl: 'https://img.keaitupian.cn/newupload/11/1668492556474791.jpg',
     );
     var u2 = ChatUser(
-      uid: '002',
+      uid: 102,
       nickname: 'text-03',
       avatarUrl:
           'https://c-ssl.dtstatic.com/uploads/blog/202212/18/20221218144515_64111.thumb.1000_0.jpg',
     );
     var u3 = ChatUser(
-      uid: '1',
+      uid: 1,
       nickname: 'admin',
       avatarUrl:
           'https://c-ssl.duitang.com/uploads/blog/202107/17/20210717100716_31038.jpg',
@@ -64,7 +68,7 @@ class ChatController extends ChangeNotifier {
         roomUpdateTime: 1920902,
         roomStatus: 0,
         roomType: 0,
-        memberIds: ["001","1"],
+        memberIds: [1,1],
       ),
     );
     _chatroomList.add(
@@ -81,7 +85,7 @@ class ChatController extends ChangeNotifier {
         roomUpdateTime: 1920902,
         roomStatus: 0,
         roomType: 0,
-        memberIds: ["002","1"],
+        memberIds: [2,1],
       ),
     );
     _users.add(u1);
@@ -124,15 +128,16 @@ class ChatController extends ChangeNotifier {
   }
   ///
   /// 获取所有房间成员 除了自己
-  String getRoomMembersExceptSelf() {
-    return _chatRoom.memberIds
-        .where((memberId) => memberId != authController.currentUser!.uid)
-        .join(','); // 可以替换成你想要的分隔符，比如 '|' 或 ';'
+  int getRoomMembersExceptSelf() {
+    return 0;
+    // return _chatRoom.memberIds
+    //     .where((memberId) => memberId != authController.currentUser!.uid)
+    //     .join(','); // 可以替换成你想要的分隔符，比如 '|' 或 ';'
   }
 
   ///
   /// 获取用户
-  ChatUser getUser(String uid) {
+  ChatUser getUser(int uid) {
     return _users.firstWhere(
       (u) => u.uid == uid,
       orElse: () => ChatUser(uid: uid, nickname: '未知用户', avatarUrl: ''),
@@ -152,6 +157,7 @@ class ChatController extends ChangeNotifier {
     if (_roomMessages[_chatRoom.roomId]!.length > 4) {
       scrollToBottom();
     }
+
     _service.send({
       "cmd": "chat",
       "token": authController.token,

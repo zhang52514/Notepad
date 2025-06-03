@@ -13,7 +13,7 @@ class ChatRoom {
   int roomUpdateTime;
   int roomStatus;
   int roomType;
-  List<String> memberIds;
+  List<int> memberIds;
 
   ChatRoom({
     required this.roomId,

@@ -107,6 +107,7 @@ class MainController extends ChangeNotifier {
       ///填充按钮
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: Colors.indigo,
           elevation: 4,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         ),
@@ -223,6 +224,6 @@ class MainController extends ChangeNotifier {
     // if (brightnessString == 'light') {
     //   return Brightness.light;
     // }d
-    return Brightness.light;
+    return Brightness.dark;
   }
 }

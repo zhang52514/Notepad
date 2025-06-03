@@ -1,51 +1,91 @@
 import 'package:flustars/flustars.dart';
 import 'package:flutter/material.dart';
 import 'package:notepad/common/domain/ChatUser.dart';
+import 'package:notepad/common/module/AnoToast.dart';
 
 import '../core/websocket_service.dart';
 
 class AuthController extends ChangeNotifier {
   final String _url = 'ws://127.0.0.1:8081/chat';
+  final WebSocketService _ws = WebSocketService();
+
   ChatUser? _currentUser;
-  String? token;
+  String? _token;
+  bool _isLoading = false;
+
+  bool get isLoading => _isLoading;
 
   ChatUser? get currentUser => _currentUser;
 
-  AuthController() {}
+  String? get token => _token;
 
+  /// 初始化方法，通过本地存储的用户信息自动进行身份验证
   Future<void> init() async {
-    await SpUtil.getInstance(); // 确保 SharedPreferences 已初始化
+    final Map<dynamic, dynamic>? userInfo = SpUtil.getObject("userinfo");
+    final String? storedToken = SpUtil.getString("token");
 
-    Map<dynamic, dynamic>? userinfo = SpUtil.getObject("userinfo");
-    token = SpUtil.getString("token");
+    if (userInfo != null && storedToken != null) {
+      _isLoading = true;
+      // 初始化 WebSocket
+      _ws.initialize(url: _url);
 
-    if (userinfo != null && token != null) {
-      var ws = WebSocketService();
-      ws.initialize(url: _url);
+      // 监听服务端消息
+      _ws.addListener(_onMessageReceived);
 
-      // 等待 WebSocket 连接成功（你可能需要加个监听或等待机制）
-      ws.addListener((msg) {
-        if (msg.code == "200" && msg.data != null) {
-          _currentUser = ChatUser.fromJson(msg.data);
-          token = msg.data["key"];
-          notifyListeners(); // 数据加载后再刷新 UI
-        }
-      });
-
-      // 你也可以把发送 auth 的逻辑封装到 WebSocketService 中更优雅
-      ws.send({"cmd": "auth", "userName": "admin", "userPwd": "123133131"});
+      try {
+        // 使用存储的用户名和密码进行身份验证
+        _ws.auth(userInfo["username"], userInfo["password"]);
+      } catch (e) {
+        // 此处可引入日志系统记录错误
+        print("WebSocket auth init error: $e");
+      }
     }
   }
 
-  void login(ChatUser user) {
-    _currentUser = user;
-    WebSocketService().initialize(url: _url);
-    SpUtil.putObject("userinfo", user.toJson());
+  /// 登录方法，通过传入的用户对象进行身份验证
+  void login(String username, String password) {
+    _ws.initialize(url: _url);
+    _isLoading = true;
+    _ws.addListener(_onMessageReceived);
+
+    try {
+      _ws.auth(username, password);
+    } catch (e) {
+      print("WebSocket auth login error: $e");
+    }
+  }
+
+  /// 通用的消息处理方法
+  void _onMessageReceived(dynamic msg) {
+    print("服务器AUTH${msg.data}");
+    if (msg.code == "200" && msg.data != null) {
+      _currentUser = ChatUser.fromJson(msg.data["user"]);
+      print("转换的JSON：${_currentUser}");
+      _token = msg.data["key"];
+
+      // 更新本地存储
+      SpUtil.putObject("userinfo", _currentUser!.toJson());
+      SpUtil.putString("token", _token!);
+
+      // 登录成功后移除监听器，避免重复回调
+      _ws.removeListener(_onMessageReceived);
+    } else {
+      AnoToast.showToast(msg.message, type: ToastType.error);
+    }
+    _isLoading = false;
+    // 通知监听者刷新 UI
     notifyListeners();
   }
 
+  /// 退出登录，清除用户数据及本地存储缓存
   void logout() {
     _currentUser = null;
+    _token = null;
+
+    // 清除本地缓存数据
+    SpUtil.remove("userinfo");
+    SpUtil.remove("token");
+
     notifyListeners();
   }
 }
