@@ -44,7 +44,7 @@ class ChatUser {
     return ChatUser(
       uid: json['id'] ?? '',
       username: json['username'] ?? '',
-      nickname: json['name'] ?? '',
+      nickname: json['nickname'] ?? '',
       password: json['password'] ?? '',
       avatarUrl: json['avatarUrl'] ?? '',
       email: json['email'] ?? '',

@@ -9,6 +9,7 @@ class MessagePayload {
   final String avatar;
   final String type;
   final String content;
+  /// 是否反转（是否为当前用户发送）true=左边 false=右边
   final bool reverse;
   // 可选的附加数据（用于特定渲染器）
   final Map<String, dynamic> extra;

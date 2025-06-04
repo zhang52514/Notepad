@@ -111,6 +111,7 @@ class ChatMessageBubble extends StatelessWidget {
   Widget _buildAvatar(String url) {
     return ClipOval(
       child: CachedNetworkImage(
+        filterQuality: FilterQuality.high,
         imageUrl: url,
         width: 40,
         fit: BoxFit.cover,

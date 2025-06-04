@@ -117,18 +117,33 @@ class TitleBarState extends State<TitleBar> {
     }
     return Builder(
       builder: (context) {
-        return CircleAvatar(
-          radius: 18,
-          backgroundColor: Colors.transparent,
-          child: CachedNetworkImage(
-            imageUrl: user.avatarUrl,
-            placeholder:
-                (context, url) =>
-                    HugeIcon(icon: HugeIcons.strokeRoundedLoading03),
-            errorWidget:
-                (_, __, ___) => Center(
-                  child: HugeIcon(icon: HugeIcons.strokeRoundedUserCircle02),
-                ),
+        return Tooltip(
+          message: "${user.nickname} 已登录",
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.grey.shade400, width: 1),
+            ),
+            child: ClipOval(
+              child: CachedNetworkImage(
+                filterQuality: FilterQuality.high,
+                imageUrl: user.avatarUrl,
+                fit: BoxFit.cover,
+                width: 29,
+                height: 29,
+                placeholder:
+                    (context, url) =>
+                        HugeIcon(icon: HugeIcons.strokeRoundedLoading03),
+                errorWidget:
+                    (_, __, ___) => Center(
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeRoundedUserCircle02,
+                      ),
+                    ),
+              ),
+            ),
           ),
         );
       },

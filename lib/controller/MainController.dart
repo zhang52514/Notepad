@@ -223,7 +223,7 @@ class MainController extends ChangeNotifier {
     //     SpUtil.getString('key_brightness', defValue: 'light') ?? 'light';
     // if (brightnessString == 'light') {
     //   return Brightness.light;
-    // }d
+    // }
     return Brightness.dark;
   }
 }

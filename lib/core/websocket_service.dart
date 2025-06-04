@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:notepad/common/module/AnoToast.dart';
 import 'package:web_socket_channel/status.dart' as status_;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -29,7 +30,7 @@ class WebSocketService {
 
   Timer? _reconnectTimer;
   int _retryCount = 0;
-  final int _maxRetries = 10;
+  final int _maxRetries = 5;
   final Duration _reconnectDelay = const Duration(seconds: 5);
 
   void initialize({required String url}) {
@@ -37,25 +38,36 @@ class WebSocketService {
     connect();
   }
 
+  ///链接
   void connect() {
     if (_status == WebSocketConnectionStatus.connecting ||
-        _status == WebSocketConnectionStatus.connected)
+        _status == WebSocketConnectionStatus.connected) {
       return;
+    }
 
     _setStatus(WebSocketConnectionStatus.connecting);
 
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_url));
+      bool hasConnected = false;
+
       _channel!.stream.listen(
-        _onData,
+        (data) {
+          if (!hasConnected) {
+            hasConnected = true;
+            _setStatus(WebSocketConnectionStatus.connected);
+            _log("WebSocket 已连接.$_status");
+            _flushPendingMessages();
+          }
+          _onData(data);
+        },
         onDone: _onDisconnected,
         onError: _onError,
         cancelOnError: true,
       );
-      _retryCount = 0;
       _setStatus(WebSocketConnectionStatus.connected);
+      _log("WebSocket 已连接.$_status");
       _flushPendingMessages();
-      _log("WebSocket connected.");
     } catch (e) {
       _onError(e);
     }
@@ -66,18 +78,18 @@ class WebSocketService {
     send({"cmd": "auth", "userName": name, "userPwd": pwd});
   }
 
+  ///发送消息
   void send(Map<String, dynamic> message) {
     if (_status == WebSocketConnectionStatus.connected) {
       _channel?.sink.add(json.encode(message));
-      print("send:${json.encode(message)}");
+      print("向服务器发送消息:${json.encode(message)}");
     } else {
       _pendingMessages.add(message);
-      _log(
-        "Send failed: WebSocket not connected. Message queued: ${json.encode(message)}",
-      );
+      _log("向服务器发送消息失败了: ${json.encode(message)}");
     }
   }
 
+  ///消息队列
   void _flushPendingMessages() {
     for (var msg in _pendingMessages) {
       _channel?.sink.add(json.encode(msg));
@@ -86,45 +98,54 @@ class WebSocketService {
   }
 
   void _onData(dynamic data) {
-    print("新消息：$data");
+    _log("客户端收到新消息：$data");
     try {
       final decoded = json.decode(data);
       final message = WebSocketMessage.fromJson(decoded);
       _notifyListeners(message);
     } catch (e) {
-      _log("Data parse error: $e");
+      _log("数据解析错误: $e-->$data");
     }
   }
 
   void _onDisconnected() {
-    _setStatus(WebSocketConnectionStatus.disconnected);
-    _log("WebSocket disconnected.");
-    _scheduleReconnect();
+    if (_status != WebSocketConnectionStatus.disconnected) {
+      _setStatus(WebSocketConnectionStatus.disconnected);
+      _log("WebSocket 已断开连接.");
+      _scheduleReconnect();
+    }
   }
 
   void _onError(dynamic error) {
     _setStatus(WebSocketConnectionStatus.error);
-    _log("WebSocket error: $error");
+    _log("链接出现异常: $error");
     _scheduleReconnect();
   }
 
+  ///链接重试
   void _scheduleReconnect() {
+    String msg = "";
     if (_retryCount >= _maxRetries) {
-      _log("Max retries reached. Giving up reconnecting.");
+      msg = "已达到最大重试次数。放弃连接。";
+      AnoToast.showToast(msg, type: ToastType.error);
+      _log(msg);
       return;
     }
     _retryCount++;
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(_reconnectDelay, connect);
-    _log("Scheduled reconnect (#$_retryCount) in $_reconnectDelay.");
+    msg = "尝试第( $_retryCount )次重新连接 $_reconnectDelay.";
+    _log(msg);
+    AnoToast.showToast(msg, type: ToastType.error);
   }
 
   void _notifyListeners(WebSocketMessage message) {
-    for (var listener in _listeners) {
+    final listenersCopy = [..._listeners];
+    for (var listener in listenersCopy) {
       try {
         listener(message);
       } catch (e) {
-        _log("Listener error: $e");
+        _log("订阅异常: $e");
       }
     }
   }
@@ -135,6 +156,7 @@ class WebSocketService {
 
   void addStatusListener(void Function(WebSocketConnectionStatus) listener) {
     _statusListeners.add(listener);
+    listener(status);
   }
 
   void removeListener(WebSocketListener listener) {
@@ -149,16 +171,17 @@ class WebSocketService {
     _listeners.clear();
 
     _setStatus(WebSocketConnectionStatus.disconnected);
-    _log("WebSocketService disposed.");
+    _log("服务器主动断开链接.");
   }
 
   void _setStatus(WebSocketConnectionStatus newStatus) {
+    if (_status == newStatus) return;
     _status = newStatus;
     for (var listener in _statusListeners) {
       try {
         listener(newStatus);
       } catch (e) {
-        _log("StatusListener error: $e");
+        _log("状态订阅异常: $e");
       }
     }
   }

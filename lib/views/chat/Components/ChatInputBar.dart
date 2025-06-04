@@ -477,7 +477,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                           //   value.controller.document.toDelta().toJson(),
                           // );
                           ChatMessage msg = value.parseDeltaToMessage(widget.chatController);
-                          widget.chatController.addMessage(msg);
+                          widget.chatController.sendMessage(msg);
                           value.controller.document = Document();
                         },
                         icon: HugeIcon(

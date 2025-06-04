@@ -21,7 +21,9 @@ class ChatList extends StatefulWidget {
 class _ChatListState extends State<ChatList> {
   @override
   Widget build(BuildContext context) {
+    //获取房间数量
     int count = widget.value.getRoomCount();
+
     return Column(
       children: [
         Container(
@@ -32,7 +34,11 @@ class _ChatListState extends State<ChatList> {
           height: 50.h,
           child: Row(
             children: [
-              Expanded(child: Text(widget.value.getMessagesForRoom().length.toString())),
+              Expanded(
+                child: Text(
+                  widget.value.getMessagesForRoom().length.toString(),
+                ),
+              ),
               IconButton(icon: const Icon(Icons.add), onPressed: () {}),
             ],
           ),
@@ -42,7 +48,7 @@ class _ChatListState extends State<ChatList> {
             : Expanded(
               child: ListView.builder(
                 controller: widget.value.scrollChatListController,
-                itemCount: widget.value.getRoomCount(),
+                itemCount: count,
                 itemBuilder:
                     (context, index) => Padding(
                       padding: EdgeInsets.only(left: 2.w, right: 7.w),
@@ -55,8 +61,12 @@ class _ChatListState extends State<ChatList> {
                         hoverColor:
                             widget.value.isScrolling
                                 ? Colors.transparent
-                                : Colors.indigo.shade400,
-                        leading: _buildAvatar(widget.value.getRoom(index).roomAvatar),
+                                : ThemeUtil.isDarkMode(context)
+                                ? Colors.white.withValues(alpha: 0.05)
+                                : Colors.black.withValues(alpha: 0.05),
+                        leading: _buildAvatar(
+                          widget.value.getRoom(index).roomAvatar,
+                        ),
                         title: Text(
                           widget.value.getRoom(index).roomName,
                           overflow: TextOverflow.ellipsis,
@@ -71,17 +81,22 @@ class _ChatListState extends State<ChatList> {
                         ),
                         trailing: Column(
                           children: [
+                            /// 时间
                             Text(
-                              DateUtil.formatTime(widget.value.getRoom(index).roomLastMessageTime),
+                              DateUtil.formatTime(
+                                widget.value.getRoom(index).roomLastMessageTime,
+                              ),
                               style: TextStyle(
                                 color:
                                     widget.value.selectIndex == index
                                         ? Colors.white
-                                        : Colors.grey.shade900,
+                                        : Colors.grey.shade600,
                               ),
                             ),
                             Expanded(child: SizedBox.shrink()),
-                            VibratingBadge(messageCount: index),
+
+                            ///未读消息数量
+                            VibratingBadge(messageCount: widget.value.getRoomUnReadCount(index)),
                           ],
                         ),
                         onTap: () => widget.value.setSelectIndex(index),
@@ -93,9 +108,11 @@ class _ChatListState extends State<ChatList> {
     );
   }
 
+  /// 构建头像
   Widget _buildAvatar(String url) {
     return ClipOval(
       child: CachedNetworkImage(
+        filterQuality: FilterQuality.high,
         imageUrl: url,
         width: 40,
         fit: BoxFit.cover,

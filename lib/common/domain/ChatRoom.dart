@@ -1,8 +1,5 @@
-import 'package:notepad/common/domain/ChatMessage.dart';
-import 'package:notepad/common/domain/ChatUser.dart';
-
 class ChatRoom {
-  String roomId;
+  int roomId;
   String roomName;
   String roomAvatar;
   String roomDescription;
@@ -12,7 +9,7 @@ class ChatRoom {
   int roomCreateTime;
   int roomUpdateTime;
   int roomStatus;
-  int roomType;
+  RoomType roomType;
   List<int> memberIds;
 
   ChatRoom({
@@ -34,4 +31,11 @@ class ChatRoom {
   String toString() {
     return 'ChatRoom{roomId: $roomId, roomName: $roomName, roomAvatar: $roomAvatar, roomDescription: $roomDescription, roomLastMessage: $roomLastMessage, roomLastMessageTime: $roomLastMessageTime, roomUnreadCount: $roomUnreadCount, roomCreateTime: $roomCreateTime, roomUpdateTime: $roomUpdateTime, roomStatus: $roomStatus, roomType: $roomType}';
   }
+}
+
+
+enum RoomType{
+  private,
+  group,
+  public,
 }

@@ -25,7 +25,6 @@ class _ChatDetailState extends State<ChatDetail> {
   @override
   void initState() {
     super.initState();
-    debugPrint("ChatDetail initState");
     final ctl = Provider.of<ChatController>(context, listen: false);
     ctl.itemPositionsListener.itemPositions.addListener(() {
       final positions = ctl.itemPositionsListener.itemPositions.value;
@@ -54,11 +53,19 @@ class _ChatDetailState extends State<ChatDetail> {
         ThemeUtil.isDarkMode(context) ? Color(0xFF292929) : Colors.white;
     return Consumer<ChatController>(
       builder: (context, ChatController value, child) {
+        //未选择任何ChatRoom
+        if (value.chatRoom == null) {
+          return Center(child: Text("欢迎"));
+        }
+        //当前选择的ChatRoom
         ChatRoom room = value.chatRoom;
+        //获取当前房间的所有消息
         List<ChatMessage> chatMessages = value.getMessagesForRoom();
+
         return Scaffold(
           key: _scaffoldKey,
           backgroundColor: color,
+          //头部信息
           appBar: AppBar(
             elevation: 0,
             surfaceTintColor: Colors.transparent,
@@ -84,23 +91,32 @@ class _ChatDetailState extends State<ChatDetail> {
               ),
             ],
           ),
+          //内容
           body: () {
+            //如果消息列表为空 显示提示
             if (chatMessages.isEmpty) {
               return Center(child: Text("暂无数据"));
             }
-
+            //获取当前用户
             ChatUser user = value.authController.currentUser!;
 
+            //有数据 开始构建ChatListView
             return ScrollablePositionedList.builder(
               reverse: true,
               padding: EdgeInsets.only(left: 10.w, right: 10.w),
               itemCount: chatMessages.length,
               itemBuilder: (context, index) {
+                //获取消息
                 final msg = chatMessages[index];
+                //判断是不是自己
                 bool isMe = msg.senderId == user.uid;
-                ChatUser u = value.getUser(
-                  isMe ? msg.senderId : msg.receiverId,
-                );
+
+                ChatUser u =
+                    room.roomType == RoomType.private
+                        ? value.getUser(isMe ? msg.senderId : msg.receiverId)
+                        : value.getUser(msg.senderId);
+
+
                 MessagePayload payload = MessagePayload(
                   name: u.nickname,
                   type: msg.type.name,
@@ -108,7 +124,7 @@ class _ChatDetailState extends State<ChatDetail> {
                   avatar: u.avatarUrl,
                   content: msg.content,
                   extra: {'value': 'data3'},
-                  time: index % 2 == 0 ? '13:23' : '13:56',
+                  time: msg.timestamp,
                 );
                 return ChatMessageBubble(payload: payload);
               },
@@ -116,6 +132,7 @@ class _ChatDetailState extends State<ChatDetail> {
               itemPositionsListener: value.itemPositionsListener,
             );
           }(),
+          //固定跳转
           // floatingActionButton: FloatingActionButton(
           //   onPressed: () {
           //     value.itemScrollController.jumpTo(index: 180);

@@ -10,6 +10,7 @@ import 'package:notepad/views/main/titleBar.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../core/websocket_service.dart';
 import 'auth/AuthLogin.dart';
 
 /// 主窗口
@@ -28,9 +29,9 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
   ConnectivityResult networkResult = ConnectivityResult.none;
   String networkStatus = "网络检测中...";
 
-  Future<void> _initAsync() async {
-    await context.read<AuthController>().init();
-  }
+  String webSocketStatus = "服务器连接中";
+  WebSocketConnectionStatus webSocketResult =
+      WebSocketConnectionStatus.connecting;
 
   @override
   void initState() {
@@ -39,8 +40,8 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
     windowManager.addListener(this);
     //配置Window关闭按钮可拦截
     // windowManager.setPreventClose(true);
-
-    _initAsync();
+    final auth = context.read<AuthController>();
+    auth.connectWebsocket();
     subscription = Connectivity().onConnectivityChanged.listen((
       List<ConnectivityResult> result,
     ) {
@@ -48,33 +49,52 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
         switch (result.first) {
           case ConnectivityResult.wifi:
             networkStatus = "Wi-Fi";
-            networkResult = ConnectivityResult.wifi;
             break;
           case ConnectivityResult.mobile:
             networkStatus = "移动网络";
-            networkResult = ConnectivityResult.mobile;
             break;
           case ConnectivityResult.ethernet:
             networkStatus = "有线网络";
-            networkResult = ConnectivityResult.ethernet;
             break;
           case ConnectivityResult.vpn:
             networkStatus = "VPN";
-            networkResult = ConnectivityResult.vpn;
             break;
           case ConnectivityResult.other:
             networkStatus = "其他网络";
-            networkResult = ConnectivityResult.other;
             break;
           case ConnectivityResult.none:
             networkStatus = "无网络";
-            networkResult = ConnectivityResult.none;
             break;
           case ConnectivityResult.bluetooth:
             networkStatus = "蓝牙";
-            networkResult = ConnectivityResult.bluetooth;
             break;
         }
+        networkResult = result.first;
+      });
+    });
+
+    WebSocketService().addStatusListener((status) {
+      setState(() {
+        switch (status) {
+          case WebSocketConnectionStatus.connecting:
+            webSocketStatus = "服务器连接中";
+            break;
+          case WebSocketConnectionStatus.disconnected:
+            webSocketStatus = "服务器断开连接";
+            auth.logout();
+            break;
+          case WebSocketConnectionStatus.connected:
+            webSocketStatus = "服务器已连接";
+            if (auth.currentUser == null) {
+              auth.init();
+            }
+            break;
+          case WebSocketConnectionStatus.error:
+            webSocketStatus = "服务器异常";
+            auth.logout();
+            break;
+        }
+        webSocketResult = status;
       });
     });
   }
@@ -103,6 +123,10 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
       return SingleCloseView(child: Center(child: Text("网络异常，请检查网络连接！")));
     }
 
+    if (webSocketResult != WebSocketConnectionStatus.connected) {
+      return SingleCloseView(child: Center(child: Text(webSocketStatus)));
+    }
+
     var mainController = context.watch<MainController>();
     var authController = context.watch<AuthController>();
 
@@ -113,6 +137,7 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
     if (authController.currentUser == null) {
       return const AuthLogin();
     }
+
     return Row(
       children: [
         // 侧边栏

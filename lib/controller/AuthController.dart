@@ -24,51 +24,46 @@ class AuthController extends ChangeNotifier {
     final Map<dynamic, dynamic>? userInfo = SpUtil.getObject("userinfo");
     final String? storedToken = SpUtil.getString("token");
 
-    if (userInfo != null && storedToken != null) {
+    if (userInfo != null && storedToken != null && _currentUser == null) {
       _isLoading = true;
-      // 初始化 WebSocket
-      _ws.initialize(url: _url);
-
-      // 监听服务端消息
-      _ws.addListener(_onMessageReceived);
-
       try {
-        // 使用存储的用户名和密码进行身份验证
         _ws.auth(userInfo["username"], userInfo["password"]);
       } catch (e) {
-        // 此处可引入日志系统记录错误
         print("WebSocket auth init error: $e");
       }
     }
   }
 
+  void connectWebsocket() {
+    _ws.initialize(url: _url);
+    _ws.addListener(_onMessageReceived);
+  }
+
   /// 登录方法，通过传入的用户对象进行身份验证
   void login(String username, String password) {
-    _ws.initialize(url: _url);
     _isLoading = true;
-    _ws.addListener(_onMessageReceived);
-
     try {
       _ws.auth(username, password);
     } catch (e) {
       print("WebSocket auth login error: $e");
     }
+    notifyListeners();
   }
 
   /// 通用的消息处理方法
   void _onMessageReceived(dynamic msg) {
-    print("服务器AUTH${msg.data}");
+    if (_currentUser != null) return;
     if (msg.code == "200" && msg.data != null) {
-      _currentUser = ChatUser.fromJson(msg.data["user"]);
-      print("转换的JSON：${_currentUser}");
-      _token = msg.data["key"];
+      if (msg.data["user"] != null && msg.data["key"] != null) {
+        _currentUser = ChatUser.fromJson(msg.data["user"]);
+        _token = msg.data["key"];
 
-      // 更新本地存储
-      SpUtil.putObject("userinfo", _currentUser!.toJson());
-      SpUtil.putString("token", _token!);
-
-      // 登录成功后移除监听器，避免重复回调
-      _ws.removeListener(_onMessageReceived);
+        // 更新本地存储
+        SpUtil.putObject("userinfo", _currentUser!.toJson());
+        SpUtil.putString("token", _token!);
+      } else {
+        AnoToast.showToast("用户信息不存在，请检查后再试！", type: ToastType.error);
+      }
     } else {
       AnoToast.showToast(msg.message, type: ToastType.error);
     }
@@ -81,11 +76,6 @@ class AuthController extends ChangeNotifier {
   void logout() {
     _currentUser = null;
     _token = null;
-
-    // 清除本地缓存数据
-    SpUtil.remove("userinfo");
-    SpUtil.remove("token");
-
     notifyListeners();
   }
 }
