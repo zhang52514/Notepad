@@ -12,6 +12,8 @@ import 'package:notepad/views/chat/Components/ChatInputBar.dart';
 import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import '../../common/utils/DateUtil.dart';
+
 class ChatDetail extends StatefulWidget {
   const ChatDetail({super.key});
 
@@ -109,22 +111,21 @@ class _ChatDetailState extends State<ChatDetail> {
                 //获取消息
                 final msg = chatMessages[index];
                 //判断是不是自己
-                bool isMe = msg.senderId == user.uid;
+                bool isMe = msg.senderId == user.id;
 
-                ChatUser u =
-                    room.roomType == RoomType.private
-                        ? value.getUser(isMe ? msg.senderId : msg.receiverId)
-                        : value.getUser(msg.senderId);
-
+                // ChatUser u =
+                //     room.roomType == RoomType.private
+                //         ? value.getUser(isMe ? msg.senderId : msg.receiverId)
+                //         : value.getUser(msg.senderId);
 
                 MessagePayload payload = MessagePayload(
-                  name: u.nickname,
+                  name: "u.nickname",
                   type: msg.type.name,
                   reverse: !isMe,
-                  avatar: u.avatarUrl,
+                  avatar: "u.avatarUrl",
                   content: msg.content,
                   extra: {'value': 'data3'},
-                  time: msg.timestamp,
+                  time: DateUtil.formatTime(msg.timestamp),
                 );
                 return ChatMessageBubble(payload: payload);
               },

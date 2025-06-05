@@ -16,13 +16,13 @@ import '../core/websocket_service.dart';
 /// ChatController core controller
 class ChatController extends ChangeNotifier
     with RoomMixin, UserMixin, MessageMixin {
-  final WebSocketService _service = WebSocketService();
+  final WebSocketService _ws = WebSocketService();
   late AuthController authController;
 
   ChatController({required this.authController}) {
     ///滚动监听
     scrollChatListController.addListener(_onScroll);
-    _service.addListener((msg) {
+    _ws.addListener((msg) {
       print("Chat new Message:$msg");
 
       final raw = msg.data;
@@ -39,15 +39,16 @@ class ChatController extends ChangeNotifier
 
   ///初始化数据
   _initData() {
+    String token=authController.token!;
     initUser();
-    initRoom();
+    initRoom(_ws,token,authController.currentUser!.id);
     addUser(authController.currentUser!);
   }
 
   ///
   /// 发送消息
   void sendMessage(ChatMessage message) {
-    _service.send({
+    _ws.send({
       "cmd": "chat",
       "token": authController.token,
       "senderId": message.senderId,

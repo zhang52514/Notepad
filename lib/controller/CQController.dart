@@ -5,6 +5,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:notepad/controller/ChatController.dart';
 
+import '../common/domain/ChatEnumAll.dart';
 import '../common/domain/ChatMessage.dart';
 import '../common/domain/ChatRoom.dart';
 
@@ -139,8 +140,9 @@ class CQController extends ChangeNotifier {
 
     final chatMsg = ChatMessage(
       messageId: DateTime.now().millisecondsSinceEpoch.toString(),
-      senderId: value.authController.currentUser!.uid,
-      receiverId: _determineReceiverId(value),
+      senderId: value.authController.currentUser!.id,
+      // receiverId: _determineReceiverId(value),
+       receiverId: "_determineReceiverId(value)",
       content: buffer.toString().trim(),
       status: MessageStatus.sent,
       type:
@@ -155,7 +157,7 @@ class CQController extends ChangeNotifier {
       roomId: value.chatRoom.roomId,
       read: [],
       metadata: metadata,
-      timestamp: '',
+      timestamp: DateTime.now(),
     );
 
     if (chatMsg.type == MessageType.quill) {
@@ -167,17 +169,18 @@ class CQController extends ChangeNotifier {
   /// 根据房间类型确定接收者 ID
   /// 私聊：取第一个非当前用户的成员 ID
   /// 群聊：房间 ID 解析为整数
-  int _determineReceiverId(ChatController controller) {
-    final room = controller.chatRoom;
-    if (room.roomType == RoomType.group) {
-      // 假设 roomId 可转为整数，否则返回 -1
-      return int.tryParse(room.roomId) ?? -1;
-    }
-    // 私聊场景：安全取除自己外的成员
-    return room.memberIds.firstWhere(
-          (id) => id != controller.authController.currentUser!.uid,
-      orElse: () => -1,  // 如果没有找到，就返回 -1
-    );
+  String _determineReceiverId(ChatController controller) {
+    // final room = controller.chatRoom;
+    // if (room.roomType == RoomType.group) {
+    //   // 假设 roomId 可转为整数，否则返回 -1
+    //   return int.tryParse(room.roomId) ?? -1;
+    // }
+    // // 私聊场景：安全取除自己外的成员
+    // return room.memberIds.firstWhere(
+    //       (id) => id != controller.authController.currentUser!.uid,
+    //   orElse: () => -1,  // 如果没有找到，就返回 -1
+    // );
+    return "";
   }
   ///
   /// 判断是否是纯emoji

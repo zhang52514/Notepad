@@ -6,20 +6,20 @@ import '../../common/domain/ChatMessage.dart';
 mixin MessageMixin on ChangeNotifier, RoomMixin {
   ///
   /// k->v k=roomId,v= List ChatMessage 聊天消息
-  final Map<int, List<ChatMessage>> _roomMessages = {};
+  final Map<String,List<ChatMessage>> _roomMessages = {};
 
   get roomMessages => _roomMessages;
 
   /// 获取某个房间的所有消息列表
   /// 注意：返回的是副本，避免外部直接修改导致UI不更新
   List<ChatMessage> getMessagesForRoom() {
-    int roomId=getCurrentRoomId();
+    String roomId=getCurrentRoomId();
     return _roomMessages[roomId]?.reversed.toList() ?? [];
   }
 
   // 添加一条新消息到指定房间
   void addMessage(ChatMessage message, VoidCallback scrollToBottom) {
-    int roomId = getCurrentRoomId();
+    String roomId = getCurrentRoomId();
     if (!_roomMessages.containsKey(roomId)) {
       _roomMessages[roomId] = []; // 如果房间不存在，则创建一个新的消息列表
     }
@@ -36,7 +36,7 @@ mixin MessageMixin on ChangeNotifier, RoomMixin {
   }
 
   // 批量添加消息到指定房间 (例如：从历史记录加载)
-  void addMessagesBatch(int roomId, List<ChatMessage> messages) {
+  void addMessagesBatch(String roomId, List<ChatMessage> messages) {
     if (!_roomMessages.containsKey(roomId)) {
       _roomMessages[roomId] = [];
     }

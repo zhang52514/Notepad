@@ -28,6 +28,7 @@ class MessageRendererRegistry {
   }
 
   static AbstractMessageRenderer fromType(MessagePayload payload) {
+    print("消息类型：${payload.type.toLowerCase()}");
     final builder = _registry[payload.type.toLowerCase()];
     if (builder != null) {
       return builder(payload);

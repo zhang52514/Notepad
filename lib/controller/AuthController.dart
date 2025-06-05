@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flustars/flustars.dart';
 import 'package:flutter/material.dart';
 import 'package:notepad/common/domain/ChatUser.dart';
@@ -8,6 +11,73 @@ import '../core/websocket_service.dart';
 class AuthController extends ChangeNotifier {
   final String _url = 'ws://127.0.0.1:8081/chat';
   final WebSocketService _ws = WebSocketService();
+  String webSocketStatus = "初始化中";
+  WebSocketConnectionStatus webSocketResult =
+      WebSocketConnectionStatus.disconnected;
+  late StreamSubscription<List<ConnectivityResult>> subscription;
+  ConnectivityResult networkResult = ConnectivityResult.none;
+  String networkStatus = "未知";
+
+  AuthController() {
+    _ws.addStatusListener((status) {
+      switch (status) {
+        case WebSocketConnectionStatus.connecting:
+          webSocketStatus = "服务器连接中";
+          break;
+        case WebSocketConnectionStatus.disconnected:
+          webSocketStatus = "服务器断开连接";
+          logout(not: false);
+          break;
+        case WebSocketConnectionStatus.connected:
+          webSocketStatus = "服务器已连接";
+          if (currentUser == null) {
+            init();
+          }
+          break;
+        case WebSocketConnectionStatus.error:
+          webSocketStatus = "服务器异常";
+          logout(not: false);
+          break;
+      }
+      webSocketResult = status;
+      notifyListeners();
+    });
+    subscription = Connectivity().onConnectivityChanged.listen((
+      List<ConnectivityResult> result,
+    ) {
+      switch (result.first) {
+        case ConnectivityResult.wifi:
+          networkStatus = "Wi-Fi";
+          break;
+        case ConnectivityResult.mobile:
+          networkStatus = "移动网络";
+          break;
+        case ConnectivityResult.ethernet:
+          networkStatus = "有线网络";
+          break;
+        case ConnectivityResult.vpn:
+          networkStatus = "VPN";
+          break;
+        case ConnectivityResult.other:
+          networkStatus = "其他网络";
+          break;
+        case ConnectivityResult.none:
+          networkStatus = "无网络";
+          break;
+        case ConnectivityResult.bluetooth:
+          networkStatus = "蓝牙";
+          break;
+      }
+      networkResult = result.first;
+
+      if (networkResult != ConnectivityResult.none &&
+          webSocketResult != WebSocketConnectionStatus.connected &&
+          webSocketResult != WebSocketConnectionStatus.connecting) {
+        connectWebsocket();
+      }
+      notifyListeners();
+    });
+  }
 
   ChatUser? _currentUser;
   String? _token;
@@ -73,9 +143,18 @@ class AuthController extends ChangeNotifier {
   }
 
   /// 退出登录，清除用户数据及本地存储缓存
-  void logout() {
+  /// {not} 是否通知监听者刷新 UI
+  void logout({bool not = true}) {
     _currentUser = null;
     _token = null;
-    notifyListeners();
+    if (not) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    subscription.cancel();
   }
 }

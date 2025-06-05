@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:notepad/common/module/SingleCloseView.dart';
@@ -25,14 +23,6 @@ class MainNavigatorWidgetWindows extends StatefulWidget {
 
 class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
     with WindowListener {
-  late StreamSubscription<List<ConnectivityResult>> subscription;
-  ConnectivityResult networkResult = ConnectivityResult.none;
-  String networkStatus = "网络检测中...";
-
-  String webSocketStatus = "服务器连接中";
-  WebSocketConnectionStatus webSocketResult =
-      WebSocketConnectionStatus.connecting;
-
   @override
   void initState() {
     super.initState();
@@ -40,63 +30,6 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
     windowManager.addListener(this);
     //配置Window关闭按钮可拦截
     // windowManager.setPreventClose(true);
-    final auth = context.read<AuthController>();
-    auth.connectWebsocket();
-    subscription = Connectivity().onConnectivityChanged.listen((
-      List<ConnectivityResult> result,
-    ) {
-      setState(() {
-        switch (result.first) {
-          case ConnectivityResult.wifi:
-            networkStatus = "Wi-Fi";
-            break;
-          case ConnectivityResult.mobile:
-            networkStatus = "移动网络";
-            break;
-          case ConnectivityResult.ethernet:
-            networkStatus = "有线网络";
-            break;
-          case ConnectivityResult.vpn:
-            networkStatus = "VPN";
-            break;
-          case ConnectivityResult.other:
-            networkStatus = "其他网络";
-            break;
-          case ConnectivityResult.none:
-            networkStatus = "无网络";
-            break;
-          case ConnectivityResult.bluetooth:
-            networkStatus = "蓝牙";
-            break;
-        }
-        networkResult = result.first;
-      });
-    });
-
-    WebSocketService().addStatusListener((status) {
-      setState(() {
-        switch (status) {
-          case WebSocketConnectionStatus.connecting:
-            webSocketStatus = "服务器连接中";
-            break;
-          case WebSocketConnectionStatus.disconnected:
-            webSocketStatus = "服务器断开连接";
-            auth.logout();
-            break;
-          case WebSocketConnectionStatus.connected:
-            webSocketStatus = "服务器已连接";
-            if (auth.currentUser == null) {
-              auth.init();
-            }
-            break;
-          case WebSocketConnectionStatus.error:
-            webSocketStatus = "服务器异常";
-            auth.logout();
-            break;
-        }
-        webSocketResult = status;
-      });
-    });
   }
 
   @override
@@ -112,23 +45,18 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
   }
 
   @override
-  void dispose() {
-    super.dispose();
-    subscription.cancel();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (networkResult == ConnectivityResult.none) {
+    var mainController = context.watch<MainController>();
+    var authController = context.watch<AuthController>();
+    if (authController.networkResult == ConnectivityResult.none) {
       return SingleCloseView(child: Center(child: Text("网络异常，请检查网络连接！")));
     }
 
-    if (webSocketResult != WebSocketConnectionStatus.connected) {
-      return SingleCloseView(child: Center(child: Text(webSocketStatus)));
+    if (authController.webSocketResult != WebSocketConnectionStatus.connected) {
+      return SingleCloseView(
+        child: Center(child: Text(authController.webSocketStatus)),
+      );
     }
-
-    var mainController = context.watch<MainController>();
-    var authController = context.watch<AuthController>();
 
     if (authController.isLoading) {
       return SingleCloseView(child: Center(child: Text("登录中...")));
@@ -144,7 +72,10 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
         Sidebar(mainctl: mainController),
         // 主内容区域
         Expanded(
-          child: TitleBar(title: networkStatus, mainCtl: mainController),
+          child: TitleBar(
+            title: authController.networkStatus,
+            mainCtl: mainController,
+          ),
         ),
       ],
     );

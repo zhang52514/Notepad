@@ -1,35 +1,51 @@
-import 'dart:ffi';
+import 'package:notepad/common/domain/ChatEnumAll.dart';
 
+/// 表示聊天系统中的一个用户。
+///
+/// 该类封装了用户的基本信息，包括唯一标识、登录名、昵称、头像、联系方式等。
+/// 同时也包含用户的当前状态和角色（如成员、管理员等）。
 class ChatUser {
-  // CREATE TABLE `user` (
-  // `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  // `username` varchar(50) NOT NULL COMMENT '用户名/账号（唯一）',
-  // `nickname` varchar(50) DEFAULT NULL COMMENT '用户昵称',
-  // `password` varchar(255) NOT NULL COMMENT '密码（加密存储）',
-  // `avatar_url` varchar(255) DEFAULT NULL COMMENT '头像地址',
-  // `email` varchar(100) DEFAULT NULL COMMENT '邮箱',
-  // `phone` varchar(20) DEFAULT NULL COMMENT '手机号',
-  // `status` tinyint DEFAULT '1' COMMENT '状态（1正常，0禁用）',
-  // `role` varchar(20) DEFAULT 'USER' COMMENT '角色（USER、ADMIN等）',
-  // `last_login_ip` varchar(45) DEFAULT NULL COMMENT '上次登录 IP',
-  // `last_login_time` datetime DEFAULT NULL COMMENT '上次登录时间',
-  // `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  // `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  // PRIMARY KEY (`id`),
-  // UNIQUE KEY `username` (`username`)
-  // ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='IM 用户表';
-  int uid;
-  String username;
-  String nickname;
-  String password;
-  String avatarUrl;
-  String email;
-  String phone;
-  String status;
-  String role;
+  /// 用户的唯一标识符，必填项。
+  String id;
 
+  /// 用户登录系统的用户名，默认为空字符串。
+  String username;
+
+  /// 用户的昵称，用于在聊天中展示，必填项。
+  String nickname;
+
+  /// 用户的登录密码，默认为空字符串。
+  String password;
+
+  /// 用户头像的URL地址，必填项。
+  String avatarUrl;
+
+  /// 用户绑定的邮箱地址，默认为空字符串。
+  String email;
+
+  /// 用户绑定的手机号码，默认为空字符串。
+  String phone;
+
+  /// 用户当前的状态描述，例如“在线”、“离线”等，默认为空字符串。
+  String status;
+
+  /// 用户在聊天系统中的角色，默认为普通成员 [ChatUserRole.member]。
+  ChatUserRole role;
+
+  /// 构造函数，创建一个 [ChatUser] 实例。
+  ///
+  /// 参数说明：
+  /// - [id]: 用户的唯一标识，必填。
+  /// - [username]: 用户名，可选，默认为空字符串。
+  /// - [nickname]: 用户昵称，必填。
+  /// - [password]: 用户密码，可选，默认为空字符串。
+  /// - [avatarUrl]: 头像URL，必填。
+  /// - [email]: 邮箱地址，可选，默认为空字符串。
+  /// - [phone]: 手机号码，可选，默认为空字符串。
+  /// - [status]: 当前状态，可选，默认为空字符串。
+  /// - [role]: 用户角色，可选，默认为 [ChatUserRole.member]。
   ChatUser({
-    required this.uid,
+    required this.id,
     this.username = '',
     required this.nickname,
     this.password = '',
@@ -37,39 +53,32 @@ class ChatUser {
     this.email = '',
     this.phone = '',
     this.status = '',
-    this.role = 'user',
+    this.role = ChatUserRole.member,
   });
 
-  factory ChatUser.fromJson(Map<dynamic, dynamic> json) {
-    return ChatUser(
-      uid: json['id'] ?? '',
-      username: json['username'] ?? '',
-      nickname: json['nickname'] ?? '',
-      password: json['password'] ?? '',
-      avatarUrl: json['avatarUrl'] ?? '',
-      email: json['email'] ?? '',
-      phone: json['phone'] ?? '',
-      status: json['status']?.toString() ?? '',
-      role: json['role'] ?? 'user',
-    );
-  }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': uid,
-      'username': username,
-      'nickname': nickname,
-      'password': password,
-      'avatar_url': avatarUrl,
-      'email': email,
-      'phone': phone,
-      'status': status,
-      'role': role,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'username': username,
+    'nickname': nickname,
+    'password': password,
+    'avatarUrl': avatarUrl,
+    'email': email,
+    'phone': phone,
+    'status': status,
+    'role': role.name,
+  };
 
-  @override
-  String toString() {
-    return 'ChatUser{uid: $uid, username: $username, nickname: $nickname, password: $password, avatarUrl: $avatarUrl, email: $email, phone: $phone, status: $status, role: $role}';
-  }
+  static ChatUser fromJson(Map<String, dynamic> json) => ChatUser(
+    id: json['id'],
+    username: json['username'] ?? '',
+    nickname: json['nickname'],
+    password: json['password'] ?? '',
+    avatarUrl: json['avatarUrl'],
+    email: json['email'] ?? '',
+    phone: json['phone'] ?? '',
+    status: json['status'] ?? '',
+    role: ChatUserRole.values.byName(json['role'] ?? 'member'),
+  );
 }
+
