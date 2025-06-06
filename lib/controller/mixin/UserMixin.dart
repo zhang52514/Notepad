@@ -1,32 +1,32 @@
 import 'package:flutter/material.dart';
 
 import '../../common/domain/ChatUser.dart';
+import '../../core/websocket_service.dart';
 
 mixin UserMixin on ChangeNotifier {
   ///
   ///所有用户
-  final List<ChatUser> _users = [];
+  final Map<String, ChatUser> _users = {};
 
-  initUser(){
-    //模拟后端返回
-    // var u1 = ChatUser(
-    //   uid: 103,
-    //   nickname: 'test-103',
-    //   avatarUrl: 'https://img.keaitupian.cn/newupload/11/1668492556474791.jpg',
-    // );
-    // var u2 = ChatUser(
-    //   uid: 102,
-    //   nickname: 'text-102',
-    //   avatarUrl:
-    //   'https://c-ssl.dtstatic.com/uploads/blog/202212/18/20221218144515_64111.thumb.1000_0.jpg',
-    // );
-    // _users.add(u1);
-    // _users.add(u2);
+  Map<String, ChatUser> get users => _users;
+
+  initUser(WebSocketService ws, String token, String id) {
+    ws.http("/getUsers", token, {"id": id});
   }
 
-  void addUser(ChatUser user) {
-    _users.add(user);
+  void setUsers(List<dynamic> data, String uid) {
+    // 1. 清空旧列表
+    _users.clear();
+    // 2. 遍历 JSON 列表，转换并填充 Map
+    for (final item in data) {
+      final json = item as Map<String, dynamic>;
+      final user = ChatUser.fromJson(json);
+
+      _users[user.id] = user;
+    }
   }
 
-
+  ChatUser getUser(String id) {
+    return _users[id] ?? ChatUser(id: id, nickname: "未知用户", avatarUrl: '');
+  }
 }

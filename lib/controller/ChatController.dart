@@ -7,6 +7,7 @@ import 'package:notepad/controller/mixin/RoomMixin.dart';
 import 'package:notepad/controller/mixin/UserMixin.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import '../common/domain/ChatEnumAll.dart';
 import '../common/domain/ChatMessage.dart';
 import '../common/module/AnoToast.dart';
 import '../core/websocket_service.dart';
@@ -15,7 +16,7 @@ import '../core/websocket_service.dart';
 ///
 /// ChatController core controller
 class ChatController extends ChangeNotifier
-    with RoomMixin, UserMixin, MessageMixin {
+    with UserMixin, RoomMixin, MessageMixin {
   final WebSocketService _ws = WebSocketService();
   late AuthController authController;
 
@@ -25,11 +26,23 @@ class ChatController extends ChangeNotifier
     _ws.addListener((msg) {
       print("Chat new Message:$msg");
 
-      final raw = msg.data;
-
-      if (msg.code == "200" && raw != null && raw['cmd'] == 'chat') {
-        final message = ChatMessage.fromJson(raw);
-        addMessage(message, scrollToBottom);
+      if (msg.code == "200") {
+        final raw = msg.data;
+        if (raw != null && raw['cmd'] == Cmd.chat.name) {
+          final message = ChatMessage.fromJson(raw);
+          addMessage(message, scrollToBottom);
+        }
+        if (raw != null && raw['cmd'] == Cmd.http.name) {
+          if (raw['path'] == HttpPath.getUsers.name) {
+            setUsers(raw["users"], authController.currentUser!.id);
+          }
+          if (raw['path'] == HttpPath.getRooms.name) {
+            setRooms(raw["rooms"], authController.currentUser!.id);
+          }
+          if (raw['path'] == HttpPath.getHistory.name) {
+            setMessage(raw["messages"]);
+          }
+        }
       } else {
         AnoToast.showToast(msg.message, type: ToastType.error);
       }
@@ -39,10 +52,10 @@ class ChatController extends ChangeNotifier
 
   ///初始化数据
   _initData() {
-    String token=authController.token!;
-    initUser();
-    initRoom(_ws,token,authController.currentUser!.id);
-    addUser(authController.currentUser!);
+    String token = authController.token!;
+    initUser(_ws, token, authController.currentUser!.id);
+    initRoom(_ws, token, authController.currentUser!.id);
+    initMessage(_ws,token,authController.currentUser!.id,20);
   }
 
   ///

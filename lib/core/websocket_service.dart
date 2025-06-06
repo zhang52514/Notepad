@@ -77,6 +77,7 @@ class WebSocketService {
   void auth(String name, String pwd) {
     send({"cmd": "auth", "userName": name, "userPwd": pwd});
   }
+
   ///Http
   void http(String path, String token, Map<String, dynamic> param) {
     send({"cmd": "http", "path": path, "token": token, "param": param});

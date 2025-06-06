@@ -47,3 +47,6 @@ enum ChatUserRole {
   member, // 普通成员
 }
 
+enum Cmd { chat, http, auth }
+
+enum HttpPath { getRooms, getUsers, getHistory }

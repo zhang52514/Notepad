@@ -1,9 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:notepad/common/domain/ChatEnumAll.dart';
+import 'package:notepad/controller/mixin/UserMixin.dart';
 
 import '../../common/domain/ChatRoom.dart';
 import '../../core/websocket_service.dart';
 
-mixin RoomMixin on ChangeNotifier {
+mixin RoomMixin on ChangeNotifier ,UserMixin{
   ///
   /// ChatRoom List
   final List<ChatRoom> _chatroomList = [];
@@ -20,6 +24,35 @@ mixin RoomMixin on ChangeNotifier {
   ///初始化ROOM
   initRoom(WebSocketService ws, String token, String id) {
     ws.http("/getRooms", token, {"id": id});
+  }
+
+  void setRooms(List<dynamic> data, String uid) {
+    // 1. 清空旧列表
+    _chatroomList.clear();
+
+    // 2. 填充房间列表
+    _chatroomList.addAll(
+        data.map((item) => ChatRoom.fromJson(item as Map<String, dynamic>))
+    );
+
+    // 3. 单聊房间重命名为对方用户信息
+    for (var room in _chatroomList) {
+      if (room.roomType == ChatRoomType.single) {
+        // 找到“不等于当前 uid” 的那个成员
+        final otherId = room.memberIds.firstWhere(
+              (memberId) => memberId != uid,
+          orElse: () => '',
+        );
+        if (otherId.isNotEmpty && users.containsKey(otherId)) {
+          final user = users[otherId]!;
+          room.roomName = user.nickname;
+          room.roomAvatar = user.avatarUrl;
+        }
+      }
+    }
+
+    // 4. 通知 UI 更新
+    notifyListeners();
   }
 
   ///

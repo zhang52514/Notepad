@@ -66,20 +66,36 @@ class ChatRoom {
     'memberRoles': memberRoles.map((k, v) => MapEntry(k, v.name)),
   };
 
-  static ChatRoom fromJson(Map<String, dynamic> json) => ChatRoom(
-    roomId: json['roomId'],
-    roomName: json['roomName'],
-    roomAvatar: json['roomAvatar'],
-    roomDescription: json['roomDescription'],
-    roomLastMessage: json['roomLastMessage'],
-    roomLastMessageTime: DateTime.parse(json['roomLastMessageTime']),
-    roomUnreadCount: json['roomUnreadCount'],
-    roomStatus: ChatRoomStatus.values.byName(json['roomStatus']),
-    roomType: ChatRoomType.values.byName(json['roomType']),
-    memberIds: List<String>.from(json['memberIds']),
-    memberRoles: Map<String, ChatUserRole>.from(
-      (json['memberRoles'] as Map).map((k, v) => MapEntry(k, ChatUserRole.values.byName(v))),
-    ),
-  );
-}
+  static ChatRoom fromJson(Map<String, dynamic> json) {
+    return ChatRoom(
+      roomId: json['roomId'] ?? '',
+      roomName: json['roomName'] ?? '',
+      roomAvatar: json['roomAvatar'] ?? '',
+      roomDescription: json['roomDescription'] ?? '',
+      roomLastMessage: json['roomLastMessage'] ?? '',
+      // 这里json里如果没有roomLastMessageTime或为空，默认当前时间，避免异常
+      roomLastMessageTime: json['roomLastMessageTime'] != null
+          ? DateTime.parse(json['roomLastMessageTime'])
+          : DateTime.now(),
+      // 这个字段示例中没出现，给默认值0
+      roomUnreadCount: json['roomUnreadCount'] ?? 0,
+      roomStatus: json['roomStatus'] != null
+          ? ChatRoomStatus.values.byName(json['roomStatus'])
+          : ChatRoomStatus.normal, // 根据你枚举定义给默认值
+      roomType: json['roomType'] != null
+          ? ChatRoomType.values.byName(json['roomType'])
+          : ChatRoomType.single, // 根据你枚举定义给默认值
+      memberIds: json['memberIds'] != null
+          ? List<String>.from(json['memberIds'])
+          : [],
+      memberRoles: json['memberRoles'] != null
+          ? Map<String, ChatUserRole>.from(
+        (json['memberRoles'] as Map).map(
+              (k, v) => MapEntry(k, ChatUserRole.values.byName(v)),
+        ),
+      )
+          : {},
+    );
+  }
 
+}

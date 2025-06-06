@@ -35,7 +35,7 @@ class ChatMessage {
   Map<String, dynamic> metadata;
 
   /// 时间戳，表示消息发送的时间。
-  DateTime timestamp;
+  DateTime? timestamp;
 
   /// ChatMessage构造函数，初始化消息对象。
   /// 参数均为必需，以确保每条消息都有完整的属性。
@@ -67,22 +67,24 @@ class ChatMessage {
     'timestamp': timestamp,
   };
 
-  static ChatMessage fromJson(Map<String, dynamic> json) => ChatMessage(
-    messageId: json['messageId'],
-    senderId: json['senderId'],
-    receiverId: json['receiverId'],
-    content: json['content'],
-    status: MessageStatus.values.byName(json['status']),
-    type: MessageType.values.byName(json['type']),
-    attachments:
-        (json['attachments'] as List)
-            .map((e) => Attachment.fromJson(e))
-            .toList(),
-    roomId: json['roomId'],
-    read: List<String>.from(json['read']),
-    metadata: Map<String, dynamic>.from(json['metadata']),
-    timestamp: json['timestamp'],
-  );
+  static ChatMessage fromJson(Map<String, dynamic> json) {
+    return ChatMessage(
+      messageId: json['messageId'],
+      senderId: json['senderId'],
+      receiverId: json['receiverId'],
+      content: json['content'],
+      status: MessageStatus.values.byName(json['status']),
+      type: MessageType.values.byName(json['type']),
+      attachments:
+          (json['attachment'] as List<dynamic>? ?? [])
+              .map((e) => Attachment.fromJson(e))
+              .toList(),
+      roomId: json['roomId'],
+      read: List<String>.from(json['read'] ?? []),
+      metadata: Map<String, dynamic>.from(json['metadata'] ?? {}),
+      timestamp: json['timestamp'] != null?DateTime.parse(json['timestamp']):null,
+    );
+  }
 }
 
 /// Attachment类代表一个附件。

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/domain/ChatEnumAll.dart';
 import 'package:notepad/common/domain/ChatMessage.dart';
 import 'package:notepad/common/domain/ChatRoom.dart';
 import 'package:notepad/common/domain/ChatUser.dart';
@@ -113,19 +114,19 @@ class _ChatDetailState extends State<ChatDetail> {
                 //判断是不是自己
                 bool isMe = msg.senderId == user.id;
 
-                // ChatUser u =
-                //     room.roomType == RoomType.private
-                //         ? value.getUser(isMe ? msg.senderId : msg.receiverId)
-                //         : value.getUser(msg.senderId);
+                ChatUser u =
+                    room.roomType == ChatRoomType.single
+                        ? value.getUser(isMe ? msg.senderId : msg.receiverId)
+                        : value.getUser(msg.senderId);
 
                 MessagePayload payload = MessagePayload(
-                  name: "u.nickname",
+                  name: u.nickname,
                   type: msg.type.name,
                   reverse: !isMe,
-                  avatar: "u.avatarUrl",
+                  avatar: u.avatarUrl,
                   content: msg.content,
                   extra: {'value': 'data3'},
-                  time: DateUtil.formatTime(msg.timestamp),
+                  time: msg.timestamp!=null?DateUtil.formatTime(msg.timestamp!):'',
                 );
                 return ChatMessageBubble(payload: payload);
               },

@@ -2,18 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:notepad/controller/mixin/RoomMixin.dart';
 
 import '../../common/domain/ChatMessage.dart';
+import '../../core/websocket_service.dart';
 
 mixin MessageMixin on ChangeNotifier, RoomMixin {
   ///
   /// k->v k=roomId,v= List ChatMessage 聊天消息
-  final Map<String,List<ChatMessage>> _roomMessages = {};
+  Map<String, List<ChatMessage>> _roomMessages = {};
 
   get roomMessages => _roomMessages;
+
+  ///初始化
+  initMessage(WebSocketService ws, String token, String id,int limit) {
+    ws.http("/getHistory", token, {"id":id,"limit": limit});
+  }
+
+  void setMessage(Map<String, dynamic> data) {
+    data.forEach((roomId, messagesList) {
+      if (messagesList is List) {
+        _roomMessages[roomId] =
+            messagesList
+                .whereType<Map<String, dynamic>>()
+                .map((e) => ChatMessage.fromJson(e))
+                .toList();
+      }
+    });
+
+    notifyListeners();
+  }
 
   /// 获取某个房间的所有消息列表
   /// 注意：返回的是副本，避免外部直接修改导致UI不更新
   List<ChatMessage> getMessagesForRoom() {
-    String roomId=getCurrentRoomId();
+    String roomId = getCurrentRoomId();
     return _roomMessages[roomId]?.reversed.toList() ?? [];
   }
 
@@ -78,5 +98,4 @@ mixin MessageMixin on ChangeNotifier, RoomMixin {
     _roomMessages.clear();
     notifyListeners();
   }
-
 }
