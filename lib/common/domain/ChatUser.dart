@@ -80,5 +80,10 @@ class ChatUser {
     status: json['status'] ?? '',
     role: ChatUserRole.values.byName(json['role'] ?? 'member'),
   );
+
+  @override
+  String toString() {
+    return 'ChatUser{id: $id, username: $username, nickname: $nickname, password: $password, avatarUrl: $avatarUrl, email: $email, phone: $phone, status: $status, role: $role}';
+  }
 }
 

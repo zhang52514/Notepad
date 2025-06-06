@@ -27,6 +27,7 @@ mixin UserMixin on ChangeNotifier {
   }
 
   ChatUser getUser(String id) {
+    print(id);
     return _users[id] ?? ChatUser(id: id, nickname: "未知用户", avatarUrl: '');
   }
 }

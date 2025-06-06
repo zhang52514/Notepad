@@ -114,10 +114,7 @@ class _ChatDetailState extends State<ChatDetail> {
                 //判断是不是自己
                 bool isMe = msg.senderId == user.id;
 
-                ChatUser u =
-                    room.roomType == ChatRoomType.single
-                        ? value.getUser(isMe ? msg.senderId : msg.receiverId)
-                        : value.getUser(msg.senderId);
+                ChatUser u = value.getUser(msg.senderId);
 
                 MessagePayload payload = MessagePayload(
                   name: u.nickname,
@@ -126,7 +123,10 @@ class _ChatDetailState extends State<ChatDetail> {
                   avatar: u.avatarUrl,
                   content: msg.content,
                   extra: {'value': 'data3'},
-                  time: msg.timestamp!=null?DateUtil.formatTime(msg.timestamp!):'',
+                  time:
+                      msg.timestamp != null
+                          ? DateUtil.formatTime(msg.timestamp!)
+                          : '',
                 );
                 return ChatMessageBubble(payload: payload);
               },
