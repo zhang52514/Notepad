@@ -24,13 +24,13 @@ class ChatController extends ChangeNotifier
     ///滚动监听
     scrollChatListController.addListener(_onScroll);
     _ws.addListener((msg) {
-      print("Chat new Message:$msg");
+      // print("Chat new Message:$msg");
 
       if (msg.code == "200") {
         final raw = msg.data;
         if (raw != null && raw['cmd'] == Cmd.chat.name) {
           final message = ChatMessage.fromJson(raw);
-          addMessage(message, scrollToBottom);
+          addMessage(message, scrollToBottom, authController.currentUser!.id);
         }
         if (raw != null && raw['cmd'] == Cmd.http.name) {
           if (raw['path'] == HttpPath.getUsers.name) {
@@ -40,22 +40,13 @@ class ChatController extends ChangeNotifier
             setRooms(raw["rooms"], authController.currentUser!.id);
           }
           if (raw['path'] == HttpPath.getHistory.name) {
-            setMessage(raw["messages"]);
+            setMessage(raw["messages"], authController.currentUser!.id);
           }
         }
       } else {
         AnoToast.showToast(msg.message, type: ToastType.error);
       }
     });
-    _initData();
-  }
-
-  ///初始化数据
-  _initData() {
-    String token = authController.token!;
-    initUser(_ws, token, authController.currentUser!.id);
-    initRoom(_ws, token, authController.currentUser!.id);
-    initMessage(_ws,token,authController.currentUser!.id,20);
   }
 
   ///
@@ -71,6 +62,8 @@ class ChatController extends ChangeNotifier
       "roomId": chatRoom?.roomId,
     });
   }
+
+  void sendMessageRead() {}
 
   ///ListView 控制器 左侧列表
   final ScrollController scrollChatListController = ScrollController();

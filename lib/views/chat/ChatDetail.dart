@@ -45,8 +45,21 @@ class _ChatDetailState extends State<ChatDetail> {
         null,
         (max, item) => max == null || item.index > max ? item.index : max,
       );
+      List<ChatMessage> chatMessages = ctl.getMessagesForRoom();
+      if (minIndex != null && maxIndex != null) {
+        final visibleMessages = chatMessages.sublist(
+          minIndex.clamp(0, chatMessages.length),
+          (maxIndex + 1).clamp(0, chatMessages.length),
+        );
 
-      debugPrint('Visible range: ${minIndex ?? "?"} ~ ${maxIndex ?? "?"}');
+        // ✅ 现在 visibleMessages 就是当前屏幕上显示的消息
+        for (var msg in visibleMessages) {
+          if (msg.status == MessageStatus.delivered &&
+              msg.senderId != ctl.authController.currentUser!.id) {
+            debugPrint('👀 当前可见消息：${msg.messageId}');
+          }
+        }
+      }
     });
   }
 
@@ -122,6 +135,7 @@ class _ChatDetailState extends State<ChatDetail> {
                   reverse: !isMe,
                   avatar: u.avatarUrl,
                   content: msg.content,
+                  status: msg.status,
                   extra: {'value': 'data3'},
                   time:
                       msg.timestamp != null

@@ -1,4 +1,6 @@
 
+import 'package:notepad/common/domain/ChatEnumAll.dart';
+
 ///
 /// ChatMessage 载体
 ///   渲染用
@@ -9,6 +11,7 @@ class MessagePayload {
   final String avatar;
   final String type;
   final String content;
+  final MessageStatus status;
   /// 是否反转（是否为当前用户发送）true=左边 false=右边
   final bool reverse;
   // 可选的附加数据（用于特定渲染器）
@@ -20,6 +23,7 @@ class MessagePayload {
     required this.avatar,
     required this.type,
     required this.content,
+    required this.status,
     required this.reverse,
     this.extra = const {},
   });

@@ -1,11 +1,12 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/domain/ChatEnumAll.dart';
 import 'package:notepad/common/module/bubbleDialog.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/views/chat/ChatMessage/AbstractMessageRenderer.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/MessagePayload.dart';
+
+import '../../../../common/module/AvatarWidget.dart';
 
 /// 消息气泡框
 /// [ChatMessageBubble] 消息气泡框
@@ -33,22 +34,26 @@ class ChatMessageBubble extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (payload.reverse) ...[SizedBox(width: 35)],
+                if (payload.reverse) ...[SizedBox(width: 45)],
                 Text.rich(
                   TextSpan(
-                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                    style: TextStyle(fontSize: 10, color: Colors.grey),
                     children: [
+                      TextSpan(
+                        text: !payload.reverse ? payload.status.label : '',
+                      ),
+                      TextSpan(text: "  "),
                       TextSpan(
                         text: payload.reverse ? payload.name : payload.time,
                       ),
                       TextSpan(text: "  "),
                       TextSpan(
-                        text: payload.reverse ? payload.time : payload.name,
+                        text: payload.reverse ? payload.time : '',
                       ),
                     ],
                   ),
                 ),
-                if (!payload.reverse) ...[SizedBox(width: 35)],
+                if (!payload.reverse) ...[SizedBox(width: 45)],
               ],
             ),
 
@@ -109,20 +114,21 @@ class ChatMessageBubble extends StatelessWidget {
   }
 
   Widget _buildAvatar(String url) {
-    return ClipOval(
-      child: CachedNetworkImage(
-        filterQuality: FilterQuality.high,
-        imageUrl: url,
-        width: 40,
-        fit: BoxFit.cover,
-        placeholder:
-            (context, url) => HugeIcon(icon: HugeIcons.strokeRoundedLoading03),
-        errorWidget:
-            (_, __, ___) => Center(
-              child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
-            ),
-      ),
-    );
+    // return ClipOval(
+    //   child: CachedNetworkImage(
+    //     filterQuality: FilterQuality.high,
+    //     imageUrl: url,
+    //     width: 40,
+    //     fit: BoxFit.cover,
+    //     placeholder:
+    //         (context, url) => HugeIcon(icon: HugeIcons.strokeRoundedLoading03),
+    //     errorWidget:
+    //         (_, __, ___) => Center(
+    //           child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
+    //         ),
+    //   ),
+    // );
+    return AvatarWidget(url: url);
   }
 
   /// 根据消息类型构建消息组件

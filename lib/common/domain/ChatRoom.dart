@@ -14,13 +14,13 @@ class ChatRoom {
   String roomAvatar;
 
   /// 聊天室的描述。
-  String roomDescription;
+  String? roomDescription;
 
   /// 聊天室的最后一条消息内容。
-  String roomLastMessage;
+  String? roomLastMessage;
 
   /// 聊天室最后一条消息发送的时间。
-  DateTime roomLastMessageTime;
+  DateTime? roomLastMessageTime;
 
   /// 聊天室的未读消息计数。
   int roomUnreadCount;
@@ -58,7 +58,7 @@ class ChatRoom {
     'roomAvatar': roomAvatar,
     'roomDescription': roomDescription,
     'roomLastMessage': roomLastMessage,
-    'roomLastMessageTime': roomLastMessageTime.toIso8601String(),
+    'roomLastMessageTime': roomLastMessageTime,
     'roomUnreadCount': roomUnreadCount,
     'roomStatus': roomStatus.name,
     'roomType': roomType.name,

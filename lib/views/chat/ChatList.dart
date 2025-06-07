@@ -1,11 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:notepad/common/module/VibratingBadge.dart';
 import 'package:notepad/common/utils/DateUtil.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
+
+import '../../common/module/AvatarWidget.dart';
 
 /// 聊天列表
 /// ListView + ListTile
@@ -74,7 +74,7 @@ class _ChatListState extends State<ChatList> {
                           style: TextStyle(fontSize: 13),
                         ),
                         subtitle: Text(
-                          widget.value.getRoom(index).roomLastMessage,
+                          widget.value.getRoom(index).roomLastMessage ?? '',
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                           style: TextStyle(fontSize: 11),
@@ -83,9 +83,14 @@ class _ChatListState extends State<ChatList> {
                           children: [
                             /// 时间
                             Text(
-                              DateUtil.formatTime(
-                                widget.value.getRoom(index).roomLastMessageTime,
-                              ),
+                              widget.value.getRoom(index).roomLastMessageTime ==
+                                      null
+                                  ? ''
+                                  : DateUtil.formatTime(
+                                    widget.value
+                                        .getRoom(index)
+                                        .roomLastMessageTime!,
+                                  ),
                               style: TextStyle(
                                 color:
                                     widget.value.selectIndex == index
@@ -96,7 +101,11 @@ class _ChatListState extends State<ChatList> {
                             Expanded(child: SizedBox.shrink()),
 
                             ///未读消息数量
-                            VibratingBadge(messageCount: widget.value.getRoomUnReadCount(index)),
+                            VibratingBadge(
+                              messageCount: widget.value.getRoomUnReadCount(
+                                index,
+                              ),
+                            ),
                           ],
                         ),
                         onTap: () => widget.value.setSelectIndex(index),
@@ -110,19 +119,19 @@ class _ChatListState extends State<ChatList> {
 
   /// 构建头像
   Widget _buildAvatar(String url) {
-    return ClipOval(
-      child: CachedNetworkImage(
-        filterQuality: FilterQuality.high,
-        imageUrl: url,
-        width: 40,
-        fit: BoxFit.cover,
-        placeholder:
-            (context, url) => HugeIcon(icon: HugeIcons.strokeRoundedLoading03),
-        errorWidget:
-            (_, __, ___) => Center(
-              child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
-            ),
-      ),
-    );
+    // return ClipOval(
+    //   child: CachedNetworkImage(
+    //     filterQuality: FilterQuality.high,
+    //     imageUrl: url,
+    //     width: 40,
+    //     placeholder:
+    //         (context, url) => HugeIcon(icon: HugeIcons.strokeRoundedLoading03),
+    //     errorWidget:
+    //         (_, __, ___) => Center(
+    //           child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
+    //         ),
+    //   ),
+    // );
+    return AvatarWidget(url: url);
   }
 }

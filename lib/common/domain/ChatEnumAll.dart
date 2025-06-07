@@ -37,6 +37,23 @@ enum MessageStatus {
   failed, // 消息发送失败（需重试）
 }
 
+extension MessageStatusExtension on MessageStatus {
+  String get label {
+    switch (this) {
+      case MessageStatus.sending:
+        return "发送中";
+      case MessageStatus.sent:
+        return "已发送";
+      case MessageStatus.delivered:
+        return "已送达";
+      case MessageStatus.read:
+        return "已读";
+      case MessageStatus.failed:
+        return "发送失败";
+      }
+  }
+}
+
 ///
 /// ChatUser
 ///

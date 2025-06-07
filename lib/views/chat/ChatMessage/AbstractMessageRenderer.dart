@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:notepad/common/domain/ChatEnumAll.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/MessagePayload.dart';
 import 'package:notepad/views/chat/ChatMessage/TextMessageRenderer.dart';
@@ -28,7 +29,6 @@ class MessageRendererRegistry {
   }
 
   static AbstractMessageRenderer fromType(MessagePayload payload) {
-    print("消息类型：${payload.type.toLowerCase()}");
     final builder = _registry[payload.type.toLowerCase()];
     if (builder != null) {
       return builder(payload);
@@ -38,6 +38,7 @@ class MessageRendererRegistry {
           avatar: '',
           name: payload.name,
           time: payload.time,
+          status: MessageStatus.sent,
           type: 'text',
           reverse: true,
           content: '暂不支持的消息类型: ${payload.type}',

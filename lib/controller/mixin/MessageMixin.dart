@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:notepad/common/domain/ChatRoom.dart';
 import 'package:notepad/controller/mixin/RoomMixin.dart';
 
+import '../../common/domain/ChatEnumAll.dart';
 import '../../common/domain/ChatMessage.dart';
 import '../../core/websocket_service.dart';
 
@@ -12,21 +14,22 @@ mixin MessageMixin on ChangeNotifier, RoomMixin {
   get roomMessages => _roomMessages;
 
   ///初始化
-  initMessage(WebSocketService ws, String token, String id,int limit) {
-    ws.http("/getHistory", token, {"id":id,"limit": limit});
+  initMessage(WebSocketService ws, String token, String id, int limit) {
+    ws.http("/getHistory", token, {"id": id, "limit": limit});
   }
 
-  void setMessage(Map<String, dynamic> data) {
+  void setMessage(Map<String, dynamic> data, String uid) {
+    _roomMessages.clear();
     data.forEach((roomId, messagesList) {
-      if (messagesList is List) {
-        _roomMessages[roomId] =
-            messagesList
-                .whereType<Map<String, dynamic>>()
-                .map((e) => ChatMessage.fromJson(e))
-                .toList();
-      }
-    });
+      if (messagesList is! List) return;
 
+      _roomMessages[roomId] =
+          messagesList
+              .whereType<Map<String, dynamic>>()
+              .map((e) => ChatMessage.fromJson(e))
+              .toList();
+    });
+    refreshConversationSummaries(uid);
     notifyListeners();
   }
 
@@ -37,16 +40,52 @@ mixin MessageMixin on ChangeNotifier, RoomMixin {
     return _roomMessages[roomId]?.reversed.toList() ?? [];
   }
 
+  //设置房间未读消息以及 最后一条消息
+  void refreshConversationSummaries(String currentUserId) {
+    for (final entry in _roomMessages.entries) {
+      final roomId = entry.key;
+      final messages = entry.value;
+
+      // 1. 统计未读消息
+      final unreadCount = messages
+          .where((m) => m.status != MessageStatus.read && m.senderId != currentUserId)
+          .length;
+
+      // 2. 获取最后一条消息及时间
+      final lastMessage = messages.isNotEmpty ? messages.last.content : "";
+      final lastMessageTime = messages.isNotEmpty && messages.last.timestamp != null
+          ? messages.last.timestamp!
+          : DateTime.fromMillisecondsSinceEpoch(0);
+
+      // 3. 在会话列表中查找对应 ChatRoom
+      final idx = chatroomList.indexWhere((r) => r.roomId == roomId);
+      if (idx != -1) {
+        // 已存在则更新
+        final room = chatroomList[idx];
+        room.roomUnreadCount = unreadCount;
+        room.roomLastMessage = lastMessage;
+        room.roomLastMessageTime = lastMessageTime;
+      }
+    }
+
+    // 4. 按最后消息时间降序排序
+    chatroomList.sort((ChatRoom a, ChatRoom b) {
+      final tA = a.roomLastMessageTime?? DateTime.fromMillisecondsSinceEpoch(0);
+      final tB = b.roomLastMessageTime?? DateTime.fromMillisecondsSinceEpoch(0);
+      return tB.compareTo(tA);
+    });
+  }
+
   // 添加一条新消息到指定房间
-  void addMessage(ChatMessage message, VoidCallback scrollToBottom) {
+  void addMessage(ChatMessage message, VoidCallback scrollToBottom,String uid) {
     String roomId = getCurrentRoomId();
     if (!_roomMessages.containsKey(roomId)) {
       _roomMessages[roomId] = []; // 如果房间不存在，则创建一个新的消息列表
     }
     // 添加消息
     _roomMessages[roomId]!.add(message);
-    //房间添加最后一条消息
-    chatRoom?.roomLastMessage = message.content;
+
+    refreshConversationSummaries(uid);
 
     if (_roomMessages[roomId]!.length > 4) {
       scrollToBottom();

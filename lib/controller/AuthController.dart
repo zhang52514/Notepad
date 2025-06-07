@@ -7,8 +7,12 @@ import 'package:notepad/common/domain/ChatUser.dart';
 import 'package:notepad/common/module/AnoToast.dart';
 
 import '../core/websocket_service.dart';
+import 'mixin/MessageMixin.dart';
+import 'mixin/RoomMixin.dart';
+import 'mixin/UserMixin.dart';
 
-class AuthController extends ChangeNotifier {
+class AuthController extends ChangeNotifier
+    with UserMixin, RoomMixin, MessageMixin {
   final String _url = 'ws://127.0.0.1:8081/chat';
   final WebSocketService _ws = WebSocketService();
   String webSocketStatus = "初始化中";
@@ -131,6 +135,7 @@ class AuthController extends ChangeNotifier {
         // 更新本地存储
         SpUtil.putObject("userinfo", _currentUser!.toJson());
         SpUtil.putString("token", _token!);
+        _initData();
       } else {
         AnoToast.showToast("用户信息不存在，请检查后再试！", type: ToastType.error);
       }
@@ -150,6 +155,13 @@ class AuthController extends ChangeNotifier {
     if (not) {
       notifyListeners();
     }
+  }
+
+  _initData() {
+    String token = _token!;
+    initUser(_ws, token, _currentUser!.id);
+    initRoom(_ws, token, _currentUser!.id);
+    initMessage(_ws, token, _currentUser!.id, 20);
   }
 
   @override
