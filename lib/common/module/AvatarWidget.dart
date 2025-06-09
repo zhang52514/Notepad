@@ -16,9 +16,9 @@ class AvatarWidget extends StatelessWidget {
         height: size,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) {
-          return Center(
-            child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
-          );
+          return Tooltip(
+              message: "图片加载失败",
+              child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01));
         },
       ),
     );

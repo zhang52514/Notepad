@@ -49,68 +49,67 @@ class _ChatListState extends State<ChatList> {
               child: ListView.builder(
                 controller: widget.value.scrollChatListController,
                 itemCount: count,
-                itemBuilder:
-                    (context, index) => Padding(
-                      padding: EdgeInsets.only(left: 2.w, right: 7.w),
-                      child: ListTile(
-                        visualDensity: VisualDensity.compact,
-                        key: ValueKey(widget.value.isScrolling),
-                        selected: widget.value.selectIndex == index,
-                        selectedColor: Colors.white,
-                        selectedTileColor: Colors.indigo.shade500,
-                        hoverColor:
-                            widget.value.isScrolling
-                                ? Colors.transparent
-                                : ThemeUtil.isDarkMode(context)
-                                ? Colors.white.withValues(alpha: 0.05)
-                                : Colors.black.withValues(alpha: 0.05),
-                        leading: _buildAvatar(
-                          widget.value.getRoom(index).roomAvatar,
-                        ),
-                        title: Text(
-                          widget.value.getRoom(index).roomName,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                          style: TextStyle(fontSize: 13),
-                        ),
-                        subtitle: Text(
-                          widget.value.getRoom(index).roomLastMessage ?? '',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                          style: TextStyle(fontSize: 11),
-                        ),
-                        trailing: Column(
-                          children: [
-                            /// 时间
-                            Text(
-                              widget.value.getRoom(index).roomLastMessageTime ==
-                                      null
-                                  ? ''
-                                  : DateUtil.formatTime(
-                                    widget.value
-                                        .getRoom(index)
-                                        .roomLastMessageTime!,
-                                  ),
-                              style: TextStyle(
-                                color:
-                                    widget.value.selectIndex == index
-                                        ? Colors.white
-                                        : Colors.grey.shade600,
-                              ),
-                            ),
-                            Expanded(child: SizedBox.shrink()),
+                itemBuilder: (context, index) {
+                  var room=widget.value.getRoom(index);
 
-                            ///未读消息数量
-                            VibratingBadge(
-                              messageCount: widget.value.getRoomUnReadCount(
-                                index,
-                              ),
-                            ),
-                          ],
-                        ),
-                        onTap: () => widget.value.setSelectIndex(index),
+                  return Padding(
+                    padding: EdgeInsets.only(left: 2.w, right: 7.w),
+                    child: ListTile(
+                      visualDensity: VisualDensity.compact,
+                      key: ValueKey(widget.value.isScrolling),
+                      selected: widget.value.selectIndex == index,
+                      selectedColor: Colors.white,
+                      selectedTileColor: Colors.indigo.shade500,
+                      hoverColor:
+                          widget.value.isScrolling
+                              ? Colors.transparent
+                              : ThemeUtil.isDarkMode(context)
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.black.withValues(alpha: 0.05),
+                      leading: _buildAvatar(
+                        room.roomAvatar,
                       ),
+                      title: Text(
+                        room.roomName,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      subtitle: Text(
+                        room.roomLastMessage ?? '',
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: TextStyle(fontSize: 11),
+                      ),
+                      trailing: Column(
+                        children: [
+                          /// 时间
+                          Text(
+                            room.roomLastMessageTime ==
+                                    null
+                                ? ''
+                                : DateUtil.formatTime(room.roomLastMessageTime!),
+                            style: TextStyle(
+                              color:
+                                  widget.value.selectIndex == index
+                                      ? Colors.white
+                                      : Colors.grey.shade600,
+                            ),
+                          ),
+                          Expanded(child: SizedBox.shrink()),
+
+                          ///未读消息数量
+                          VibratingBadge(
+                            messageCount: widget.value.getRoomUnReadCount(
+                              index,
+                            ),
+                          ),
+                        ],
+                      ),
+                      onTap: () => widget.value.setSelectIndex(index),
                     ),
+                  );
+                },
               ),
             ),
       ],
@@ -119,19 +118,6 @@ class _ChatListState extends State<ChatList> {
 
   /// 构建头像
   Widget _buildAvatar(String url) {
-    // return ClipOval(
-    //   child: CachedNetworkImage(
-    //     filterQuality: FilterQuality.high,
-    //     imageUrl: url,
-    //     width: 40,
-    //     placeholder:
-    //         (context, url) => HugeIcon(icon: HugeIcons.strokeRoundedLoading03),
-    //     errorWidget:
-    //         (_, __, ___) => Center(
-    //           child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
-    //         ),
-    //   ),
-    // );
     return AvatarWidget(url: url);
   }
 }

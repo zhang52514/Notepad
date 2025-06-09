@@ -10,7 +10,7 @@ import '../../core/websocket_service.dart';
 mixin RoomMixin on ChangeNotifier ,UserMixin{
   ///
   /// ChatRoom List
-  List<ChatRoom> _chatroomList = [];
+  final List<ChatRoom> _chatroomList = [];
   get chatroomList => _chatroomList;
 
   /// 当前房间

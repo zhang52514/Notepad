@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -106,7 +108,7 @@ class FileBuilder implements EmbedBuilder {
 
   @override
   String toPlainText(Embed node) {
-    final String url = node.value.data;
-    return '[file:$url]';
+    final Map<String, dynamic> data = jsonDecode(node.value.data);
+    return '[Image:${data['url']}]';
   }
 }

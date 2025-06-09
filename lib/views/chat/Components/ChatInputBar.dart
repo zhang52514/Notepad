@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:bot_toast/bot_toast.dart';
@@ -63,7 +62,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
   ///quill buttons
   Widget quillButtons(QuillController controller) {
     Color color =
-    ThemeUtil.isDarkMode(context) ? Colors.grey.shade600 : Colors.white;
+        ThemeUtil.isDarkMode(context) ? Colors.grey.shade600 : Colors.white;
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -275,9 +274,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
             decoration: BoxDecoration(
               border: Border.all(
                 color:
-                ThemeUtil.isDarkMode(context)
-                    ? Colors.grey.shade600
-                    : Colors.grey.shade300,
+                    ThemeUtil.isDarkMode(context)
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade300,
               ),
               borderRadius: BorderRadius.circular(10),
             ),
@@ -297,9 +296,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     config: QuillEditorConfig(
                       textSelectionThemeData: TextSelectionThemeData(
                         cursorColor:
-                        ThemeUtil.isDarkMode(context)
-                            ? Colors.white
-                            : Colors.indigo,
+                            ThemeUtil.isDarkMode(context)
+                                ? Colors.white
+                                : Colors.indigo,
                         selectionColor: Colors.blue.withValues(alpha: 0.5),
                       ),
 
@@ -317,9 +316,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                             fontFamily: 'HarmonyOS',
                             fontSize: 14,
                             color:
-                            ThemeUtil.isDarkMode(context)
-                                ? Colors.white
-                                : Colors.black,
+                                ThemeUtil.isDarkMode(context)
+                                    ? Colors.white
+                                    : Colors.black,
                           ),
                           HorizontalSpacing(0, 0),
                           VerticalSpacing.zero,
@@ -390,27 +389,29 @@ class _ChatInputBarState extends State<ChatInputBar> {
                           try {
                             FilePickerResult? result = await FilePicker.platform
                                 .pickFiles(
-                              allowMultiple: true,
-                              type: FileType.custom,
-                              allowedExtensions: [
-                                'jpg',
-                                'jpeg',
-                                'png',
-                                'gif',
-                                'bmp',
-                                'webp',
-                              ],
-                            );
+                                  allowMultiple: true,
+                                  type: FileType.custom,
+                                  allowedExtensions: [
+                                    'jpg',
+                                    'jpeg',
+                                    'png',
+                                    'gif',
+                                    'bmp',
+                                    'webp',
+                                  ],
+                                );
                             if (result != null) {
                               List<File> files =
-                              result.paths
-                                  .map((path) => File(path!))
-                                  .toList();
+                                  result.paths
+                                      .map((path) => File(path!))
+                                      .toList();
                               for (var file in files) {
                                 final path = file.path;
                                 int fileSize = file.lengthSync();
                                 print("图片：$fileSize=$path");
-                                value.insertEmbedAtCursor("image", path);
+                                value.insertEmbedAtCursor("image", {
+                                  "path": path,
+                                });
                               }
                             }
                           } catch (e) {
@@ -436,14 +437,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 .pickFiles(allowMultiple: true);
                             if (result != null) {
                               List<File> files =
-                              result.paths
-                                  .map((path) => File(path!))
-                                  .toList();
+                                  result.paths
+                                      .map((path) => File(path!))
+                                      .toList();
                               for (var file in files) {
                                 final path = file.path;
                                 int fileSize = file.lengthSync();
                                 print("文件：$fileSize=$path");
-                                value.insertEmbedAtCursor("file", path);
+                                value.insertEmbedAtCursor("file", {
+                                  "path": path,
+                                });
                               }
                             }
                           } catch (e) {
@@ -476,7 +479,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                           // final String json = jsonEncode(
                           //   value.controller.document.toDelta().toJson(),
                           // );
-                          ChatMessage msg = value.parseDeltaToMessage(widget.chatController);
+                          ChatMessage msg = value.parseDeltaToMessage(
+                            widget.chatController,
+                          );
                           widget.chatController.sendMessage(msg);
                           value.controller.document = Document();
                         },

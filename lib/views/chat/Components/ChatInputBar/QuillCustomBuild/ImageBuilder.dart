@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -98,7 +99,7 @@ class ImageBuilder implements EmbedBuilder {
 
   @override
   String toPlainText(Embed node) {
-    final String url = node.value.data;
-    return '[Image:$url]';
+    final Map<String, dynamic> data = jsonDecode(node.value.data);
+    return '[Image:${data['url']}]';
   }
 }

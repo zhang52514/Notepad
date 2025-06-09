@@ -30,10 +30,10 @@ class CQController extends ChangeNotifier {
 
   ///
   /// 添加组件
-  void insertEmbedAtCursor(String type, String url) {
+  void insertEmbedAtCursor(String type, Map<String, dynamic> data) {
     final offset = _controller.selection.baseOffset;
     if (offset < 0) return;
-    final embed = BlockEmbed(type, url);
+    final embed = BlockEmbed(type, jsonEncode(data));
     _controller.replaceText(
       offset,
       0,

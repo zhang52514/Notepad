@@ -19,8 +19,7 @@ class AtUserListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color? color =
-        ThemeUtil.isDarkMode(context) ? Color(0xFF292929) : Colors.white;
+    Color? color = ThemeUtil.isDarkMode(context) ? Color(0xFF292929) : Colors.white;
     return Material(
       type: MaterialType.card,
       elevation: 8,
@@ -50,7 +49,7 @@ class AtUserListWidget extends StatelessWidget {
                   closeSelected!();
                 }
                 cqController.deleteEmbedAtCursor();
-                cqController.insertEmbedAtCursor('at',"data$index");
+                cqController.insertEmbedAtCursor('at',{});
                 cqController.showAtSuggestion = false;
               },
             );
