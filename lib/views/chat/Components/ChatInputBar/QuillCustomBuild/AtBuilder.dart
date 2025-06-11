@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -11,7 +13,13 @@ class AtBuilder implements EmbedBuilder {
 
   @override
   Widget build(BuildContext context, EmbedContext embedContext) {
-    final String name = embedContext.node.value.data;
+    final Map<String, dynamic> data = jsonDecode(embedContext.node.value.data);
+    final String id = data['id'] ?? '';
+    if (id.isEmpty) {
+      return SizedBox.shrink();
+    }
+
+    final String name = data['name'] ?? '';
     return Text(
       "@$name",
       style: TextStyle(
@@ -28,7 +36,8 @@ class AtBuilder implements EmbedBuilder {
 
   @override
   String toPlainText(Embed node) {
-    final String name = node.value.data;
-    return '[at:$name]';
+        final Map<String, dynamic> data = jsonDecode(node.value.data);
+    final String id = data['id'] ?? '';
+    return '[at:$id]';
   }
 }

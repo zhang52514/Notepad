@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:notepad/common/domain/ChatEnumAll.dart';
+import 'package:notepad/common/domain/ChatUser.dart';
 import 'package:notepad/controller/mixin/UserMixin.dart';
 
 import '../../common/domain/ChatRoom.dart';
@@ -74,7 +75,15 @@ mixin RoomMixin on ChangeNotifier ,UserMixin{
     return _chatroomList[index];
   }
 
+  /// 获取当前房间id
   String getCurrentRoomId() {
     return _chatRoom?.roomId ?? "";
+  }
+
+  /// 获取当前房间成员列表
+  /// 如果当前房间不存在，返回空列表
+  List<ChatUser> getRoomMembers() {
+    if (_chatRoom == null) return [];
+    return _chatRoom!.memberIds.map((id) => users[id]!).toList();
   }
 }

@@ -18,7 +18,12 @@ class FileBuilder implements EmbedBuilder {
 
   @override
   Widget build(BuildContext context, EmbedContext embedContext) {
-    final String fileUrl = embedContext.node.value.data;
+    
+    final Map<String, dynamic> data = jsonDecode(embedContext.node.value.data);
+    final String fileUrl = data['url'] ?? '';
+    if (fileUrl.isEmpty) {
+      return SizedBox.shrink();
+    }
     final String fileName = fileUrl.split(RegExp(r'[\\/]+')).last;
     final color= controller==null?Colors.white:Colors.grey;
     return ConstrainedBox(

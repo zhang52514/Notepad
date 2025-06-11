@@ -110,7 +110,7 @@ mixin MessageMixin on ChangeNotifier, RoomMixin {
     if (messages != null) {
       final index = messages.indexWhere((msg) => msg.messageId == messageId);
       if (index != -1) {
-        final originalMessage = messages[index];
+        // final originalMessage = messages[index];
         // messages[index] = ChatMessage(
         //   id: originalMessage.id,
         //   senderId: originalMessage.senderId,

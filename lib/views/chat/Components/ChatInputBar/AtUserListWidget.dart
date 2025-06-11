@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:notepad/common/domain/ChatUser.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/controller/CQController.dart';
 
@@ -8,11 +9,13 @@ import 'package:notepad/controller/CQController.dart';
 /// click user created @ component
 ///
 class AtUserListWidget extends StatelessWidget {
+  final List<ChatUser> atUsers;
   final VoidCallback? closeSelected;
   final CQController cqController;
 
   const AtUserListWidget({
     super.key,
+    required this.atUsers,
     required this.closeSelected,
     required this.cqController,
   });
@@ -20,6 +23,11 @@ class AtUserListWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color? color = ThemeUtil.isDarkMode(context) ? Color(0xFF292929) : Colors.white;
+
+    if(atUsers.isEmpty) {
+      return SizedBox.shrink();
+    }
+
     return Material(
       type: MaterialType.card,
       elevation: 8,
@@ -31,25 +39,23 @@ class AtUserListWidget extends StatelessWidget {
           borderRadius: BorderRadius.all(Radius.circular(4)),
         ),
         child: ListView.builder(
-          itemCount: 10,
+          itemCount: atUsers.length,
           itemBuilder: (context, index) {
             return ListTile(
               dense: true,
               leading: CircleAvatar(
-                backgroundImage: NetworkImage(
-                  'https://gd-filems.dancf.com/gaoding/cms/mcm79j/mcm79j/91878/c29d3bc0-0801-4ec7-a885-a52dedc3e5961503149.png',
-                ),
+                backgroundImage: NetworkImage(atUsers[index].avatarUrl),
                 backgroundColor: Colors.transparent,
                 radius: 18,
               ),
-              title: Text("data$index"),
+              title: Text(atUsers[index].nickname),
               hoverColor: Colors.indigo,
               onTap: () {
                 if (closeSelected != null) {
                   closeSelected!();
                 }
                 cqController.deleteEmbedAtCursor();
-                cqController.insertEmbedAtCursor('at',{});
+                cqController.insertEmbedAtCursor('at', {'id': atUsers[index].id});
                 cqController.showAtSuggestion = false;
               },
             );

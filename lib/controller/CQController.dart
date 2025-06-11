@@ -7,7 +7,6 @@ import 'package:notepad/controller/ChatController.dart';
 
 import '../common/domain/ChatEnumAll.dart';
 import '../common/domain/ChatMessage.dart';
-import '../common/domain/ChatRoom.dart';
 
 class CQController extends ChangeNotifier {
   ///Quill 控制器

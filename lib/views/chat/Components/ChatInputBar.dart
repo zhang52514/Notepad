@@ -252,7 +252,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
               closeSelected: () {
                 atClose();
               },
-              cqController: value,
+              cqController: value, atUsers: widget.chatController.getRoomMembers(),
             ),
             onClose: () {
               value.showAtSuggestion = false;
