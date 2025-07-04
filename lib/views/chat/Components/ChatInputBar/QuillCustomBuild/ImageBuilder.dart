@@ -17,7 +17,12 @@ class ImageBuilder implements EmbedBuilder {
 
   @override
   Widget build(BuildContext context, EmbedContext embedContext) {
-    final String imageUrl = embedContext.node.value.data;
+  
+     final Map<String, dynamic> data = jsonDecode(embedContext.node.value.data);
+    final String imageUrl = data['path'] ?? '';
+    if (imageUrl.isEmpty) {
+      return SizedBox.shrink();
+    }
     final String heroTag = '${imageUrl}_${embedContext.node.hashCode}';
 
     final bool isNetwork =
@@ -29,6 +34,7 @@ class ImageBuilder implements EmbedBuilder {
         imageUrl.startsWith('/') || imageUrl.startsWith('file://');
     final bool isFile = isWindowsFilePath || isUnixFilePath;
 
+    print('ImageBuilder: $imageUrl, isNetwork: $isNetwork, isFile: $isFile');
     Widget imageWidget;
 
     if (isNetwork) {
@@ -65,7 +71,11 @@ class ImageBuilder implements EmbedBuilder {
             ),
       );
     } else {
-      return const Center(child: Icon(Icons.image_not_supported, size: 48));
+      return TextButton.icon(
+        onPressed: null,
+        label: Text("图片破损"),
+        icon: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
+      );
     }
 
     return ConstrainedBox(
@@ -100,6 +110,6 @@ class ImageBuilder implements EmbedBuilder {
   @override
   String toPlainText(Embed node) {
     final Map<String, dynamic> data = jsonDecode(node.value.data);
-    return '[Image:${data['url']}]';
+    return '[Image:${data['path']}]';
   }
 }

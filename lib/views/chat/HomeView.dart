@@ -35,7 +35,7 @@ class _HomeViewState extends State<HomeView> {
                     color: color,
                     child: Padding(
                       padding: EdgeInsets.all(8),
-                      child: ChatDetail(),
+                      child: ChatDetail(chatController: value),
                     ),
                   ),
                 ),

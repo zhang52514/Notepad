@@ -32,6 +32,8 @@ class ChatInputBar extends StatefulWidget {
 class _ChatInputBarState extends State<ChatInputBar> {
   ///资源管理器防抖
   bool _isPicking = false;
+  Function? atClose; // 持久化引用避免重复弹窗
+  Function? close;
 
   @override
   void initState() {
@@ -240,23 +242,28 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   @override
   Widget build(BuildContext context) {
-    late Function close;
-    late Function atClose;
     return Consumer<CQController>(
       builder: (context, CQController value, child) {
         ///@列表
-        if (value.showAtSuggestion) {
-          atClose = AnoToast.showWidget(
-            context,
+        if (value.showAtSuggestion && atClose == null) {
+          atClose = AnoToast.showWidgetOffset(
             child: AtUserListWidget(
               closeSelected: () {
-                atClose();
+                atClose?.call();
+                atClose = null;
               },
-              cqController: value, atUsers: widget.chatController.getRoomMembers(),
+              cqController: value,
+              atUsers: widget.chatController.getRoomMembers(
+                widget.chatController.authController.currentUser!.id,
+              ),
+              keyword: value.currentMentionKeyword,
             ),
             onClose: () {
               value.showAtSuggestion = false;
+              atClose = null;
             },
+            target: value.getCursorOffset(),
+            direction: PreferDirection.topLeft,
           );
         }
 
@@ -290,8 +297,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
                 /// quill editor
                 Container(
+                  key: value.editorKey,
                   constraints: BoxConstraints(maxHeight: 200.h),
                   child: QuillEditor.basic(
+                    scrollController: value.scrollController,
                     controller: value.controller,
                     config: QuillEditorConfig(
                       textSelectionThemeData: TextSelectionThemeData(
@@ -367,7 +376,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 child: ChatEmojiWidget(
                                   cqController: value,
                                   closeSelected: () {
-                                    close();
+                                    close?.call();
                                   },
                                 ),
                               );

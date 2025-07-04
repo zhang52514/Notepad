@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:notepad/controller/ChatController.dart';
@@ -10,9 +11,12 @@ import '../common/domain/ChatMessage.dart';
 
 class CQController extends ChangeNotifier {
   ///Quill 控制器
+  final GlobalKey editorKey = GlobalKey();
   final QuillController _controller = QuillController.basic();
-
+  final ScrollController scrollController = ScrollController();
   QuillController get controller => _controller;
+
+  String currentMentionKeyword = '';
 
   ///
   /// 插入文本
@@ -62,29 +66,132 @@ class CQController extends ChangeNotifier {
   ///
   /// 监听@组件显示
   ///
+  // void setupAtMentionListener() {
+  //   _controller.document.changes.listen((event) {
+  //     final selection = _controller.selection;
+
+  //     // 光标未聚焦或无效时不处理
+  //     if (!selection.isValid || !selection.isCollapsed) return;
+
+  //     final offset = selection.baseOffset;
+  //     final plainText = _controller.document.toPlainText();
+
+  //     // 光标在首位或越界，直接返回
+  //     if (offset <= 0 || offset > plainText.length) return;
+
+  //     // 取得光标前一个字符
+  //     final char = plainText[offset - 1];
+
+  //     // 如果是中文拼音组合输入中，char 可能为空字符，需过滤
+  //     if (char.trim().isEmpty) return;
+
+  //     final isAtChar = char == '@';
+
+  //     // 避免重复通知
+  //     if (isAtChar != showAtSuggestion) {
+  //       showAtSuggestion = isAtChar;
+
+  //       // 异步通知监听者更新 UI
+  //       WidgetsBinding.instance.addPostFrameCallback((_) {
+  //         notifyListeners();
+  //       });
+  //     }
+  //   });
+  // }
+
   void setupAtMentionListener() {
-    _controller.addListener(() {
-      final offset = _controller.selection.baseOffset;
+    _controller.document.changes.listen((event) {
+      final selection = _controller.selection;
+      if (!selection.isValid || !selection.isCollapsed) return;
+
+      final offset = selection.baseOffset;
       final plainText = _controller.document.toPlainText();
+
       if (offset <= 0 || offset > plainText.length) return;
 
-      final char = plainText[offset - 1];
-      if (char == '@') {
-        if (!showAtSuggestion) {
+      final beforeCursor = plainText.substring(0, offset);
+      int atIndex = beforeCursor.lastIndexOf('@');
+
+      if (atIndex == -1) {
+        // 没有@符号，只隐藏建议框，但光标保持正常
+        if (showAtSuggestion || currentMentionKeyword.isNotEmpty) {
           showAtSuggestion = true;
+          currentMentionKeyword = '';
           WidgetsBinding.instance.addPostFrameCallback((_) {
             notifyListeners();
           });
         }
-      } else {
-        if (showAtSuggestion) {
-          showAtSuggestion = false;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            notifyListeners();
-          });
-        }
+        return;
       }
+
+      final keyword = beforeCursor.substring(atIndex + 1);
+      // 含非法字符（空格、标点等） 或者 长度过长，视为非法
+      final illegal =
+          keyword.contains(RegExp(r'[^\u4e00-\u9fa5\w]')) ||
+          keyword.length > 20;
+      if (illegal || keyword.isEmpty) {
+        showAtSuggestion = true;
+        currentMentionKeyword = ''; // 空关键词表示空数据
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+        return;
+      }
+
+      // 如果有@ 但是已经关闭了  不显示框子 直接删除
+      if (atIndex != -1 && !showAtSuggestion) {
+        showAtSuggestion = false;
+        currentMentionKeyword = '';
+        return;
+      }
+      // 一切正常
+      showAtSuggestion = true;
+      currentMentionKeyword = keyword;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     });
+  }
+
+  Offset getCursorOffset() {
+    final selection = controller.selection;
+    if (!selection.isValid || !selection.isCollapsed) return Offset.zero;
+
+    final context = editorKey.currentContext;
+    if (context == null) return Offset.zero;
+
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.attached) return Offset.zero;
+
+    RenderObject? renderEditor;
+    void findEditor(RenderObject? node) {
+      if (node is RenderEditor) {
+        renderEditor = node;
+        return;
+      }
+      node?.visitChildren(findEditor);
+    }
+
+    findEditor(renderBox);
+
+    if (renderEditor is! RenderEditor) return Offset.zero;
+
+    final endpoints = (renderEditor! as RenderEditor).getEndpointsForSelection(
+      TextSelection.collapsed(offset: selection.baseOffset),
+    );
+
+    if (endpoints.isEmpty) return Offset.zero;
+
+    final caretOffset = endpoints.first.point;
+
+    final scrollOffset = scrollController.offset;
+
+    final localOffset = Offset(
+      caretOffset.dx - 10,
+      caretOffset.dy - scrollOffset - 20,
+    );
+
+    return renderBox.localToGlobal(localOffset);
   }
 
   bool showQuillButtons = false;
@@ -163,6 +270,7 @@ class CQController extends ChangeNotifier {
     }
     return chatMsg;
   }
+
   /// 根据房间类型确定接收者 ID
   /// 私聊：取第一个非当前用户的成员 ID
   /// 群聊：房间 ID 解析为整数
@@ -174,11 +282,12 @@ class CQController extends ChangeNotifier {
     // 私聊场景：安全取除自己外的成员
     // 找到“不等于当前 uid” 的那个成员
     final otherId = room.memberIds.firstWhere(
-          (memberId) => memberId != controller.authController.currentUser!.id,
+      (memberId) => memberId != controller.authController.currentUser!.id,
       orElse: () => '',
     );
     return otherId;
   }
+
   ///
   /// 判断是否是纯emoji
   bool isPureEmoji(String input) {

@@ -82,8 +82,11 @@ mixin RoomMixin on ChangeNotifier ,UserMixin{
 
   /// 获取当前房间成员列表
   /// 如果当前房间不存在，返回空列表
-  List<ChatUser> getRoomMembers() {
-    if (_chatRoom == null) return [];
-    return _chatRoom!.memberIds.map((id) => users[id]!).toList();
-  }
+List<ChatUser> getRoomMembers(String uid) {
+  if (_chatRoom == null) return [];
+  return _chatRoom!.memberIds
+      // .where((id) => id != uid) // 排除自己
+      .map((id) => users[id]!)
+      .toList();
+}
 }

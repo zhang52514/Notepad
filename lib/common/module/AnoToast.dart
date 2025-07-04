@@ -208,17 +208,19 @@ class AnoToast {
   }
 
   ///根据Offset显示Widget
-  static Function showWidgetOffset(
-    Offset target,
-    PreferDirection direction,
-    Widget child,
-  ) {
+  static Function showWidgetOffset({
+    required Offset target,
+    PreferDirection direction = PreferDirection.topLeft,
+    required Widget child,
+    VoidCallback? onClose,
+  }) {
     return BotToast.showAttachedWidget(
       target: target,
       preferDirection: direction,
       attachedBuilder: (void Function() cancelFunc) {
         return child;
       },
+      onClose: onClose
     );
   }
 }

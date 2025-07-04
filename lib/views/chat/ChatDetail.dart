@@ -16,7 +16,8 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../common/utils/DateUtil.dart';
 
 class ChatDetail extends StatefulWidget {
-  const ChatDetail({super.key});
+  final ChatController chatController;
+  const ChatDetail({super.key, required this.chatController});
 
   @override
   State<ChatDetail> createState() => _ChatDetailState();
@@ -67,106 +68,105 @@ class _ChatDetailState extends State<ChatDetail> {
   Widget build(BuildContext context) {
     Color? color =
         ThemeUtil.isDarkMode(context) ? Color(0xFF292929) : Colors.white;
-    return Consumer<ChatController>(
-      builder: (context, ChatController value, child) {
-        //未选择任何ChatRoom
-        if (value.chatRoom == null) {
-          return Center(child: Text("欢迎"));
-        }
-        //当前选择的ChatRoom
-        ChatRoom room = value.chatRoom;
-        //获取当前房间的所有消息
-        List<ChatMessage> chatMessages = value.getMessagesForRoom();
+    return () {
+      final value = widget.chatController;
+      //未选择任何ChatRoom
+      if (value.chatRoom == null) {
+        return Center(child: Text("欢迎"));
+      }
+      //当前选择的ChatRoom
+      ChatRoom room = value.chatRoom;
+      //获取当前房间的所有消息
+      List<ChatMessage> chatMessages = value.getMessagesForRoom();
 
-        return Scaffold(
-          key: _scaffoldKey,
+      return Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: color,
+        //头部信息
+        appBar: AppBar(
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          actionsPadding: EdgeInsets.zero,
           backgroundColor: color,
-          //头部信息
-          appBar: AppBar(
-            elevation: 0,
-            surfaceTintColor: Colors.transparent,
-            actionsPadding: EdgeInsets.zero,
-            backgroundColor: color,
-            title: Text(room.roomName),
-            actions: [
-              IconButton(
-                onPressed: () {
-                  _scaffoldKey.currentState?.openEndDrawer();
-                },
-                icon: HugeIcon(
-                  icon: HugeIcons.strokeRoundedUserMultiple,
-                  size: 18,
-                ),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: HugeIcon(
-                  icon: HugeIcons.strokeRoundedMoreHorizontal,
-                  size: 18,
-                ),
-              ),
-            ],
-          ),
-          //内容
-          body: () {
-            //如果消息列表为空 显示提示
-            if (chatMessages.isEmpty) {
-              return Center(child: Text("暂无数据"));
-            }
-            //获取当前用户
-            ChatUser user = value.authController.currentUser!;
-
-            //有数据 开始构建ChatListView
-            return ScrollablePositionedList.builder(
-              reverse: true,
-              padding: EdgeInsets.only(left: 10.w, right: 10.w),
-              itemCount: chatMessages.length,
-              itemBuilder: (context, index) {
-                //获取消息
-                final msg = chatMessages[index];
-                //判断是不是自己
-                bool isMe = msg.senderId == user.id;
-
-                ChatUser u = value.getUser(msg.senderId);
-
-                MessagePayload payload = MessagePayload(
-                  name: u.nickname,
-                  type: msg.type.name,
-                  reverse: !isMe,
-                  avatar: u.avatarUrl,
-                  content: msg.content,
-                  status: msg.status,
-                  extra: {'value': 'data3'},
-                  time:
-                      msg.timestamp != null
-                          ? DateUtil.formatTime(msg.timestamp!)
-                          : '',
-                );
-                return ChatMessageBubble(payload: payload);
+          title: Text(room.roomName),
+          actions: [
+            IconButton(
+              onPressed: () {
+                _scaffoldKey.currentState?.openEndDrawer();
               },
-              itemScrollController: value.itemScrollController,
-              itemPositionsListener: value.itemPositionsListener,
-            );
-          }(),
-          //固定跳转
-          // floatingActionButton: FloatingActionButton(
-          //   onPressed: () {
-          //     value.itemScrollController.jumpTo(index: 180);
-          //   },
-          //   child: Text("80"),
-          // ),
-          endDrawer: Padding(
-            padding: EdgeInsets.only(top: 50),
-            child: Drawer(
-              surfaceTintColor: Colors.transparent,
-              backgroundColor: color,
-              width: 80.w,
-              child: Center(child: Text("data")),
+              icon: HugeIcon(
+                icon: HugeIcons.strokeRoundedUserMultiple,
+                size: 18,
+              ),
             ),
+            IconButton(
+              onPressed: () {},
+              icon: HugeIcon(
+                icon: HugeIcons.strokeRoundedMoreHorizontal,
+                size: 18,
+              ),
+            ),
+          ],
+        ),
+        //内容
+        body: () {
+          //如果消息列表为空 显示提示
+          if (chatMessages.isEmpty) {
+            return Center(child: Text("暂无数据"));
+          }
+          //获取当前用户
+          ChatUser user = value.authController.currentUser!;
+
+          //有数据 开始构建ChatListView
+          return ScrollablePositionedList.builder(
+            reverse: true,
+            padding: EdgeInsets.only(left: 10.w, right: 10.w),
+            itemCount: chatMessages.length,
+            itemBuilder: (context, index) {
+              //获取消息
+              final msg = chatMessages[index];
+              //判断是不是自己
+              bool isMe = msg.senderId == user.id;
+
+              ChatUser u = value.getUser(msg.senderId);
+
+              MessagePayload payload = MessagePayload(
+                name: u.nickname,
+                type: msg.type.name,
+                reverse: !isMe,
+                avatar: u.avatarUrl,
+                content: msg.content,
+                status: msg.status,
+                extra: {'value': 'data3'},
+                time:
+                    msg.timestamp != null
+                        ? DateUtil.formatTime(msg.timestamp!)
+                        : '',
+              );
+              return ChatMessageBubble(payload: payload);
+            },
+            itemScrollController: value.itemScrollController,
+            itemPositionsListener: value.itemPositionsListener,
+          );
+        }(),
+        //固定跳转
+        // floatingActionButton: FloatingActionButton(
+        //   onPressed: () {
+        //     value.itemScrollController.jumpTo(index: 180);
+        //   },
+        //   child: Text("80"),
+        // ),
+        endDrawer: Padding(
+          padding: EdgeInsets.only(top: 50),
+          child: Drawer(
+            surfaceTintColor: Colors.transparent,
+            backgroundColor: color,
+            width: 80.w,
+            child: Center(child: Text("data")),
           ),
-          bottomNavigationBar: ChatInputBar(chatController: value),
-        );
-      },
-    );
+        ),
+        bottomNavigationBar: ChatInputBar(chatController: value),
+      );
+    }();
   }
 }
