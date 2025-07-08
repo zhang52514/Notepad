@@ -23,6 +23,7 @@ class AtBuilder implements EmbedBuilder {
     return Text(
       "@$name",
       style: TextStyle(
+        fontSize: 14,
         color: Colors.redAccent.shade700,
         fontWeight: FontWeight.bold,
       ),

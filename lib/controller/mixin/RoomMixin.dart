@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:notepad/common/domain/ChatEnumAll.dart';
 import 'package:notepad/common/domain/ChatUser.dart';

@@ -218,9 +218,9 @@ class AnoToast {
       target: target,
       preferDirection: direction,
       attachedBuilder: (void Function() cancelFunc) {
-        return child;
+        return FocusScope(canRequestFocus: false, child: child);
       },
-      onClose: onClose
+      onClose: onClose,
     );
   }
 }

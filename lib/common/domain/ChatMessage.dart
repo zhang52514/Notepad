@@ -64,25 +64,28 @@ class ChatMessage {
     'roomId': roomId,
     'read': read,
     'metadata': metadata,
-    'timestamp': timestamp,
+    'timestamp': timestamp?.toIso8601String(),
   };
 
   static ChatMessage fromJson(Map<String, dynamic> json) {
     return ChatMessage(
-      messageId: json['messageId'],
-      senderId: json['senderId'],
-      receiverId: json['receiverId'],
-      content: json['content'],
+      messageId: json['messageId'] ?? '',
+      senderId: json['senderId'] ?? '',
+      receiverId: json['receiverId'] ?? '',
+      content: json['content'] ?? '',
       status: MessageStatus.values.byName(json['status']),
       type: MessageType.values.byName(json['type']),
       attachments:
-          (json['attachment'] as List<dynamic>? ?? [])
-              .map((e) => Attachment.fromJson(e))
+          (json['attachments'] as List<dynamic>? ?? [])
+              .map((e) => Attachment.fromJson(Map<String, dynamic>.from(e)))
               .toList(),
-      roomId: json['roomId'],
+      roomId: json['roomId'] ?? '',
       read: List<String>.from(json['read'] ?? []),
       metadata: Map<String, dynamic>.from(json['metadata'] ?? {}),
-      timestamp: json['timestamp'] != null?DateTime.parse(json['timestamp']):null,
+      timestamp:
+          json['timestamp'] != null
+              ? DateTime.tryParse(json['timestamp'])
+              : null,
     );
   }
 }

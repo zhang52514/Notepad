@@ -34,7 +34,6 @@ class ImageBuilder implements EmbedBuilder {
         imageUrl.startsWith('/') || imageUrl.startsWith('file://');
     final bool isFile = isWindowsFilePath || isUnixFilePath;
 
-    print('ImageBuilder: $imageUrl, isNetwork: $isNetwork, isFile: $isFile');
     Widget imageWidget;
 
     if (isNetwork) {
@@ -110,6 +109,6 @@ class ImageBuilder implements EmbedBuilder {
   @override
   String toPlainText(Embed node) {
     final Map<String, dynamic> data = jsonDecode(node.value.data);
-    return '[Image:${data['path']}]';
+    return '[Image:${data['path']??''}]';
   }
 }

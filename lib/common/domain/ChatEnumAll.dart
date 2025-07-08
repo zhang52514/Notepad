@@ -19,12 +19,12 @@ enum ChatRoomStatus {
 ///
 enum MessageType {
   text,
-  file,
-  image,
-  audio,
-  video,
+  file, //纯文件
+  image,//纯图片
+  audio,//音频
+  video,//视频
   quill, // 富文本（富内容）
-  emoji,
+  emoji,//表情
   system, // 系统通知
   aiReply, // AI回复（特化处理）
 }

@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:notepad/controller/ChatController.dart';
@@ -102,6 +101,7 @@ class CQController extends ChangeNotifier {
   void setupAtMentionListener() {
     _controller.document.changes.listen((event) {
       final selection = _controller.selection;
+      // 光标未聚焦或无效时不处理
       if (!selection.isValid || !selection.isCollapsed) return;
 
       final offset = selection.baseOffset;
@@ -125,25 +125,24 @@ class CQController extends ChangeNotifier {
       }
 
       final keyword = beforeCursor.substring(atIndex + 1);
+      if(keyword.isNotEmpty && !showAtSuggestion){
+        return;
+      }
       // 含非法字符（空格、标点等） 或者 长度过长，视为非法
       final illegal =
           keyword.contains(RegExp(r'[^\u4e00-\u9fa5\w]')) ||
           keyword.length > 20;
       if (illegal || keyword.isEmpty) {
         showAtSuggestion = true;
-        currentMentionKeyword = ''; // 空关键词表示空数据
+        currentMentionKeyword = '';
         WidgetsBinding.instance.addPostFrameCallback((_) {
           notifyListeners();
         });
         return;
       }
 
-      // 如果有@ 但是已经关闭了  不显示框子 直接删除
-      if (atIndex != -1 && !showAtSuggestion) {
-        showAtSuggestion = false;
-        currentMentionKeyword = '';
-        return;
-      }
+      // 如果有@ 但是已经关闭了  不显示框子 可以直接删除关键字
+
       // 一切正常
       showAtSuggestion = true;
       currentMentionKeyword = keyword;
@@ -201,75 +200,84 @@ class CQController extends ChangeNotifier {
     notifyListeners();
   }
 
-  ///
-  /// 解析富文本到消息
-  ChatMessage parseDeltaToMessage(ChatController value) {
-    final List<Operation> ops = _controller.document.toDelta().toList();
-    final buffer = StringBuffer();
-    final List<Attachment> attachments = [];
-    final Map<String, dynamic> metadata = {};
-    bool isEmoji = false;
-    for (final op in ops) {
-      ///纯文本消息
-      if (op.data is String) {
-        ///是否是emoji
-        isEmoji = isPureEmoji(op.data.toString());
-        buffer.write(op.data);
-      } else if (op.data is Map) {
-        ///嵌入组件 image
-        final embedded = op.data as Map;
-        if (embedded.containsKey('image')) {
-          attachments.add(
-            Attachment(
-              url: embedded['image'],
-              type: 'image/png',
-              name: '',
-              size: 12563,
-            ),
-          );
-        } else if (embedded.containsKey('file')) {
-          ///嵌入组件 file
-          attachments.add(
-            Attachment(
-              url: embedded['file'],
-              type: 'application/pdf',
-              name: '',
-              size: 122153,
-            ),
-          );
-        } else if (embedded.containsKey('at')) {
-          ///嵌入组件 @组件
-          metadata["at"] = '@${embedded['at']}';
-        }
+  /// 解析富文本内容为 ChatMessage 实例
+ChatMessage parseDeltaToMessage(ChatController value) {
+  final List<Operation> ops = _controller.document.toDelta().toList();
+  final buffer = StringBuffer();
+  final List<Attachment> attachments = [];
+  final Map<String, dynamic> metadata = {};
+  bool hasText = false;
+  bool isAllEmoji = true;
+  bool hasEmbed = false;
+
+  for (final op in ops) {
+    final data = op.data;
+
+    if (data is String) {
+      if (!isPureEmoji(data)) {
+        isAllEmoji = false;
+      }
+      hasText = true;
+      buffer.write(data);
+    } else if (data is Map) {
+      hasEmbed = true;
+      if (data.containsKey('image')) {
+        attachments.add(Attachment(
+          url: data['image'],
+          type: 'image/png',
+          name: '',
+          size: 12563,
+        ));
+      } else if (data.containsKey('file')) {
+        attachments.add(Attachment(
+          url: data['file'],
+          type: 'application/pdf',
+          name: '',
+          size: 122153,
+        ));
+      } else if (data.containsKey('at')) {
+        metadata['at'] = '${data['at']}';
       }
     }
-
-    final chatMsg = ChatMessage(
-      messageId: DateTime.now().millisecondsSinceEpoch.toString(),
-      senderId: value.authController.currentUser!.id,
-      receiverId: _determineReceiverId(value),
-      content: buffer.toString().trim(),
-      status: MessageStatus.sent,
-      type:
-          attachments.isEmpty
-              ? isEmoji
-                  ? MessageType.emoji
-                  : MessageType.text
-              : (buffer.toString().trim().isEmpty
-                  ? MessageType.file
-                  : MessageType.quill),
-      attachments: attachments,
-      roomId: value.chatRoom.roomId,
-      read: [],
-      metadata: metadata,
-      timestamp: DateTime.now(),
-    );
-
-    if (chatMsg.type == MessageType.quill) {
-      chatMsg.content = jsonEncode(_controller.document.toDelta().toJson());
-    }
-    return chatMsg;
   }
+
+  final content = buffer.toString().trim();
+
+  // 判断最终消息类型
+  MessageType messageType;
+  if (!hasEmbed && isAllEmoji && hasText) {
+    messageType = MessageType.emoji;
+  } else if (!hasEmbed && hasText) {
+    messageType = MessageType.text;
+  } else if (attachments.isNotEmpty && !hasText) {
+    messageType = MessageType.file;
+  } else {
+    messageType = MessageType.quill;
+  }
+
+  // 构造 ChatMessage 实例
+  final chatMsg = ChatMessage(
+    messageId: DateTime.now().millisecondsSinceEpoch.toString(),
+    senderId: value.authController.currentUser!.id,
+    receiverId: _determineReceiverId(value),
+    content: content,
+    status: MessageStatus.sent,
+    type: messageType,
+    attachments: attachments,
+    roomId: value.chatRoom.roomId,
+    read: [],
+    metadata: metadata,
+    timestamp: DateTime.now(),
+  );
+
+  // 如果为富文本，保存原始 delta json
+  if (messageType == MessageType.quill) {
+    chatMsg.content = jsonEncode(_controller.document.toDelta().toJson());
+  }
+
+  return chatMsg;
+}
+
 
   /// 根据房间类型确定接收者 ID
   /// 私聊：取第一个非当前用户的成员 ID

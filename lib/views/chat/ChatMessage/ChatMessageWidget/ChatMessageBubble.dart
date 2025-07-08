@@ -79,11 +79,11 @@ class ChatMessageBubble extends StatelessWidget {
                                 payload.reverse
                                     ? AxisDirection.left
                                     : AxisDirection.right,
-                            arrowOffset: 22,
-                            arrowLength: 8,
+                            arrowOffset: 16,
+                            arrowLength: 6,
                             arrowRadius: 4,
-                            arrowWidth: 14,
-                            padding: const EdgeInsets.all(8),
+                            arrowWidth: 20,
+                            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
                             borderRadius: BorderRadius.circular(4),
                             backgroundColor:
                                 !payload.reverse

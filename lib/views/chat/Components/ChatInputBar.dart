@@ -256,10 +256,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
               atUsers: widget.chatController.getRoomMembers(
                 widget.chatController.authController.currentUser!.id,
               ),
-              keyword: value.currentMentionKeyword,
             ),
             onClose: () {
               value.showAtSuggestion = false;
+              value.currentMentionKeyword = '';
               atClose = null;
             },
             target: value.getCursorOffset(),
@@ -337,8 +337,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         placeHolder: DefaultTextBlockStyle(
                           TextStyle(fontSize: 14, color: Colors.grey),
                           HorizontalSpacing(0, 0),
-                          VerticalSpacing(6, 0),
-                          VerticalSpacing(6, 0),
+                          VerticalSpacing(0, 0),
+                          VerticalSpacing(0, 0),
                           null,
                         ),
                       ),
@@ -488,11 +488,15 @@ class _ChatInputBarState extends State<ChatInputBar> {
                           // final String json = jsonEncode(
                           //   value.controller.document.toDelta().toJson(),
                           // );
-                          ChatMessage msg = value.parseDeltaToMessage(
-                            widget.chatController,
+                          widget.chatController.sendMessage(
+                            value.parseDeltaToMessage(widget.chatController),
                           );
-                          widget.chatController.sendMessage(msg);
-                          value.controller.document = Document();
+                          value.controller.replaceText(
+                            0,
+                            value.controller.document.length - 1,
+                            '',
+                            const TextSelection.collapsed(offset: 0),
+                          );
                         },
                         icon: HugeIcon(
                           icon: HugeIcons.strokeRoundedSent,

@@ -22,9 +22,9 @@ class QuillMessageRenderer extends AbstractMessageRenderer {
     } catch (e) {
       debugPrint('格式化错误：$e');
       return SelectableText(
-        "消息格式解析错误，请检查消息内容!",
+        "消息格式解析错误!",
         style: TextStyle(
-          color: messageColor(context),
+          color: Colors.amberAccent,
           fontWeight: FontWeight.bold,
         ),
       );
@@ -39,8 +39,8 @@ class QuillMessageRenderer extends AbstractMessageRenderer {
           paragraph: DefaultTextBlockStyle(
             TextStyle(fontSize: 14, color: Colors.white),
             HorizontalSpacing(0, 0),
-            VerticalSpacing(6, 0),
-            VerticalSpacing(6, 0),
+            VerticalSpacing(0, 0),
+            VerticalSpacing(0, 0),
             null,
           ),
         ),

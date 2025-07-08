@@ -53,7 +53,7 @@ class _ChatDetailState extends State<ChatDetail> {
           (maxIndex + 1).clamp(0, chatMessages.length),
         );
 
-        // ✅ 现在 visibleMessages 就是当前屏幕上显示的消息
+        //  现在 visibleMessages 就是当前屏幕上显示的消息
         for (var msg in visibleMessages) {
           if (msg.status == MessageStatus.delivered &&
               msg.senderId != ctl.authController.currentUser!.id) {

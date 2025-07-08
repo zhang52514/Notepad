@@ -114,6 +114,6 @@ class FileBuilder implements EmbedBuilder {
   @override
   String toPlainText(Embed node) {
     final Map<String, dynamic> data = jsonDecode(node.value.data);
-    return '[file:${data['path']}]';
+    return '[file:${data['path']??''}]';
   }
 }

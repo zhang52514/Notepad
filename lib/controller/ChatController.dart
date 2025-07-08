@@ -60,7 +60,12 @@ class ChatController extends ChangeNotifier
       "content": message.content,
       "type": message.type.name,
       "roomId": chatRoom?.roomId,
+      "status":message.status.name,
+      "attachments":message.attachments,
+      "read":message.read,
+      "metadata":message.metadata
     });
+    
   }
 
   void sendMessageRead() {}
