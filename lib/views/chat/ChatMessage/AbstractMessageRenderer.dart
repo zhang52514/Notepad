@@ -42,6 +42,8 @@ class MessageRendererRegistry {
           type: 'text',
           reverse: true,
           content: '暂不支持的消息类型: ${payload.type}',
+          metadata: payload.metadata,
+          attachments: payload.attachments
         ),
       );
     }

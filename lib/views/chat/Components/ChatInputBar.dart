@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:mime/mime.dart';
 import 'package:notepad/common/domain/ChatMessage.dart';
 import 'package:notepad/common/module/AnoToast.dart';
 import 'package:notepad/common/module/ColorsBox.dart';
@@ -14,6 +15,7 @@ import 'package:notepad/controller/CQController.dart';
 import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/views/chat/Components/ChatInputBar/AtUserListWidget.dart';
 import 'package:provider/provider.dart';
+import 'package:path/path.dart' as p;
 
 import 'ChatEmojiWidget.dart';
 import 'ChatInputBar/QuillCustomBuild/AtBuilder.dart';
@@ -415,11 +417,21 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                       .map((path) => File(path!))
                                       .toList();
                               for (var file in files) {
-                                final path = file.path;
-                                int fileSize = file.lengthSync();
-                                print("图片：$fileSize=$path");
+                                final filePath = file.path;
+                                final String fileName = p.basename(filePath);
+                                final int fileSize = file.lengthSync();
+
+                                final String? mimeType = lookupMimeType(
+                                  filePath,
+                                );
+                                // 如果无法识别，可以给一个默认值
+                                final String fileType =
+                                    mimeType ?? 'application/octet-stream';
                                 value.insertEmbedAtCursor("image", {
-                                  "path": path,
+                                  "url": filePath,
+                                  "name": fileName,
+                                  "type": fileType,
+                                  "size": fileSize,
                                 });
                               }
                             }
@@ -450,11 +462,21 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                       .map((path) => File(path!))
                                       .toList();
                               for (var file in files) {
-                                final path = file.path;
-                                int fileSize = file.lengthSync();
-                                print("文件：$fileSize=$path");
+                                final filePath = file.path;
+                                final String fileName = p.basename(filePath);
+                                final int fileSize = file.lengthSync();
+
+                                final String? mimeType = lookupMimeType(
+                                  filePath,
+                                );
+                                // 如果无法识别，可以给一个默认值
+                                final String fileType =
+                                    mimeType ?? 'application/octet-stream';
                                 value.insertEmbedAtCursor("file", {
-                                  "path": path,
+                                  "url": filePath,
+                                  "name": fileName,
+                                  "type": fileType,
+                                  "size": fileSize,
                                 });
                               }
                             }

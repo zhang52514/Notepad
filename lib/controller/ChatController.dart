@@ -17,14 +17,17 @@ import '../core/websocket_service.dart';
 /// ChatController core controller
 class ChatController extends ChangeNotifier
     with UserMixin, RoomMixin, MessageMixin {
+
   final WebSocketService _ws = WebSocketService();
   late AuthController authController;
 
   ChatController({required this.authController}) {
     ///滚动监听
     scrollChatListController.addListener(_onScroll);
+
+    ///接受消息监听
     _ws.addListener((msg) {
-      // print("Chat new Message:$msg");
+      print("Chat new Message:$msg");
 
       if (msg.code == "200") {
         final raw = msg.data;

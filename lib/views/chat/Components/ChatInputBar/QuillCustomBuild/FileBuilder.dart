@@ -20,7 +20,7 @@ class FileBuilder implements EmbedBuilder {
   Widget build(BuildContext context, EmbedContext embedContext) {
     
     final Map<String, dynamic> data = jsonDecode(embedContext.node.value.data);
-    final String fileUrl = data['path'] ?? '';
+    final String fileUrl = data['url'] ?? '';
     if (fileUrl.isEmpty) {
       return SizedBox.shrink();
     }
@@ -114,6 +114,6 @@ class FileBuilder implements EmbedBuilder {
   @override
   String toPlainText(Embed node) {
     final Map<String, dynamic> data = jsonDecode(node.value.data);
-    return '[file:${data['path']??''}]';
+    return '[file:${data['url']??''}]';
   }
 }

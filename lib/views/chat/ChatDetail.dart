@@ -137,7 +137,8 @@ class _ChatDetailState extends State<ChatDetail> {
                 avatar: u.avatarUrl,
                 content: msg.content,
                 status: msg.status,
-                extra: {'value': 'data3'},
+                metadata: msg.metadata,
+                attachments: msg.attachments,
                 time:
                     msg.timestamp != null
                         ? DateUtil.formatTime(msg.timestamp!)

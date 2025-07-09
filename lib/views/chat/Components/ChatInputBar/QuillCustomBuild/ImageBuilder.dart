@@ -19,7 +19,7 @@ class ImageBuilder implements EmbedBuilder {
   Widget build(BuildContext context, EmbedContext embedContext) {
   
      final Map<String, dynamic> data = jsonDecode(embedContext.node.value.data);
-    final String imageUrl = data['path'] ?? '';
+    final String imageUrl = data['url'] ?? '';
     if (imageUrl.isEmpty) {
       return SizedBox.shrink();
     }
@@ -109,6 +109,6 @@ class ImageBuilder implements EmbedBuilder {
   @override
   String toPlainText(Embed node) {
     final Map<String, dynamic> data = jsonDecode(node.value.data);
-    return '[Image:${data['path']??''}]';
+    return '[Image:${data['url']??''}]';
   }
 }

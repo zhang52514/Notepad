@@ -125,7 +125,7 @@ class CQController extends ChangeNotifier {
       }
 
       final keyword = beforeCursor.substring(atIndex + 1);
-      if(keyword.isNotEmpty && !showAtSuggestion){
+      if (keyword.isNotEmpty && !showAtSuggestion) {
         return;
       }
       // 含非法字符（空格、标点等） 或者 长度过长，视为非法
@@ -201,83 +201,131 @@ class CQController extends ChangeNotifier {
   }
 
   /// 解析富文本内容为 ChatMessage 实例
-ChatMessage parseDeltaToMessage(ChatController value) {
-  final List<Operation> ops = _controller.document.toDelta().toList();
-  final buffer = StringBuffer();
-  final List<Attachment> attachments = [];
-  final Map<String, dynamic> metadata = {};
-  bool hasText = false;
-  bool isAllEmoji = true;
-  bool hasEmbed = false;
+  ChatMessage parseDeltaToMessage(ChatController value) {
+    final List<Operation> ops =
+        _controller.document.toDelta().toList(); // 直接使用传入的 value.document
+    final buffer = StringBuffer();
+    final List<Attachment> attachments = [];
+    final Map<String, dynamic> metadata = {};
+    bool hasText = false;
+    bool isAllEmoji = true;
+    bool hasImage = false; // 新增标记，用于判断是否包含图片
+    bool hasFile = false; // 新增标记，用于判断是否包含文件（非图片）
+    bool hasOtherEmbed = false; // 新增标记，用于判断是否包含其他嵌入内容（如@at）
 
-  for (final op in ops) {
-    final data = op.data;
+    for (final op in ops) {
+      final data = op.data;
 
-    if (data is String) {
-      if (!isPureEmoji(data)) {
-        isAllEmoji = false;
-      }
-      hasText = true;
-      buffer.write(data);
-    } else if (data is Map) {
-      hasEmbed = true;
-      if (data.containsKey('image')) {
-        attachments.add(Attachment(
-          url: data['image'],
-          type: 'image/png',
-          name: '',
-          size: 12563,
-        ));
-      } else if (data.containsKey('file')) {
-        attachments.add(Attachment(
-          url: data['file'],
-          type: 'application/pdf',
-          name: '',
-          size: 122153,
-        ));
-      } else if (data.containsKey('at')) {
-        metadata['at'] = '${data['at']}';
+      if (data is String) {
+        //去除前后空格
+        String text = data.toString().trim();
+        if (text.isNotEmpty && text != "") {
+          // 确保是实际的文本内容
+          if (!isPureEmoji(text)) {
+            isAllEmoji = false;
+          }
+          hasText = true;
+          buffer.write(text);
+        }
+      } else if (data is Map) {
+        if (data.containsKey('image')) {
+          hasImage = true; // 标记包含图片
+          final dynamic imageData = data['image'];
+          Map<String, dynamic> imageProps = {};
+          if (imageData is String) {
+            try {
+              imageProps = jsonDecode(imageData) as Map<String, dynamic>; // 对内层 JSON 字符串进行解码
+            } catch (e) {
+              imageProps['url'] = imageData;
+            }
+          } else if (imageData is Map) {
+            imageProps = imageData.cast<String, dynamic>(); // 如果已经是 Map，直接用
+          }
+          attachments.add(
+            Attachment(
+              url: imageProps['url'] ?? '', // 从解析后的 Map 中获取
+              type: imageProps['type'] ?? 'image/png',
+              name: imageProps['name'] ?? '',
+              size: int.tryParse(imageProps['size']?.toString() ?? '') ?? 0,
+            ),
+          );
+        } else if (data.containsKey('file')) {
+          hasFile = true; // 标记包含文件
+          final dynamic fileData = data['file'];
+          Map<String, dynamic> fileProps = {};
+          if (fileData is String) {
+            try {
+              fileProps = jsonDecode(fileData) as Map<String, dynamic>; // 对内层 JSON 字符串进行解码
+            } catch (e) {
+              fileProps['url'] = fileData;
+            }
+          } else if (fileData is Map) {
+            fileProps = fileData.cast<String, dynamic>(); // 如果已经是 Map，直接用
+          }
+          attachments.add(
+            Attachment(
+              url: fileProps['url'] ?? '', // 从解析后的 Map 中获取
+              type: fileProps['type'] ?? 'image/png',
+              name: fileProps['name'] ?? '',
+              size: int.tryParse(fileProps['size']?.toString() ?? '') ?? 0,
+            ),
+          );
+        } else if (data.containsKey('at')) {
+          hasOtherEmbed = true; // 标记包含其他嵌入内容
+          metadata['at'] = '${data['at']}';
+        }
+        // 可以添加其他嵌入内容的解析
       }
     }
+
+    final content = buffer.toString().trim();
+
+    // 判断最终消息类型
+    MessageType messageType;
+    if (!hasImage && !hasFile && !hasOtherEmbed && isAllEmoji && hasText) {
+      // 纯表情消息：没有嵌入内容，全是表情，且有文本内容（表情也算文本）
+      messageType = MessageType.emoji;
+    } else if (!hasImage && !hasFile && !hasOtherEmbed && hasText) {
+      // 纯文本消息：没有嵌入内容，只有文本
+      messageType = MessageType.text;
+    } else if (hasImage && !hasText && !hasFile && !hasOtherEmbed) {
+      // 纯图片消息：只有图片，没有文本和其他文件/嵌入内容
+      messageType = MessageType.image;
+    } else if (hasFile && !hasText && !hasImage && !hasOtherEmbed) {
+      // 纯文件消息：只有文件，没有文本、图片和其他嵌入内容
+      messageType = MessageType.file;
+    } else if (attachments.isNotEmpty || hasOtherEmbed || hasText) {
+      // 富文本消息：包含图片/文件/其他嵌入内容或混合文本
+      messageType = MessageType.quill;
+    } else {
+      // 默认或未知类型
+      messageType = MessageType.quill;
+    }
+
+    // 构造 ChatMessage 实例
+    final chatMsg = ChatMessage(
+      messageId: DateTime.now().millisecondsSinceEpoch.toString(),
+      senderId: value.authController.currentUser!.id,
+      receiverId: _determineReceiverId(value),
+      content: content,
+      status: MessageStatus.sent,
+      type: messageType,
+      attachments: attachments,
+      roomId: value.chatRoom.roomId,
+      read: [],
+      metadata: metadata,
+      timestamp: DateTime.now(),
+    );
+
+    // 如果为富文本，保存原始 delta json
+    if (messageType == MessageType.quill) {
+      chatMsg.content = jsonEncode(
+        _controller.document.toDelta().toJson(),
+      ); // 直接使用传入的 value.document
+    }
+
+    return chatMsg;
   }
-
-  final content = buffer.toString().trim();
-
-  // 判断最终消息类型
-  MessageType messageType;
-  if (!hasEmbed && isAllEmoji && hasText) {
-    messageType = MessageType.emoji;
-  } else if (!hasEmbed && hasText) {
-    messageType = MessageType.text;
-  } else if (attachments.isNotEmpty && !hasText) {
-    messageType = MessageType.file;
-  } else {
-    messageType = MessageType.quill;
-  }
-
-  // 构造 ChatMessage 实例
-  final chatMsg = ChatMessage(
-    messageId: DateTime.now().millisecondsSinceEpoch.toString(),
-    senderId: value.authController.currentUser!.id,
-    receiverId: _determineReceiverId(value),
-    content: content,
-    status: MessageStatus.sent,
-    type: messageType,
-    attachments: attachments,
-    roomId: value.chatRoom.roomId,
-    read: [],
-    metadata: metadata,
-    timestamp: DateTime.now(),
-  );
-
-  // 如果为富文本，保存原始 delta json
-  if (messageType == MessageType.quill) {
-    chatMsg.content = jsonEncode(_controller.document.toDelta().toJson());
-  }
-
-  return chatMsg;
-}
-
 
   /// 根据房间类型确定接收者 ID
   /// 私聊：取第一个非当前用户的成员 ID
