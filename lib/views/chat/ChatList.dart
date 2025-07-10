@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:notepad/common/domain/ChatEnumAll.dart';
 import 'package:notepad/common/module/VibratingBadge.dart';
 import 'package:notepad/common/utils/DateUtil.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
@@ -50,7 +51,7 @@ class _ChatListState extends State<ChatList> {
                 controller: widget.value.scrollChatListController,
                 itemCount: count,
                 itemBuilder: (context, index) {
-                  var room=widget.value.getRoom(index);
+                  var room = widget.value.getRoom(index);
 
                   return Padding(
                     padding: EdgeInsets.only(left: 2.w, right: 7.w),
@@ -66,29 +67,62 @@ class _ChatListState extends State<ChatList> {
                               : ThemeUtil.isDarkMode(context)
                               ? Colors.white.withValues(alpha: 0.05)
                               : Colors.black.withValues(alpha: 0.05),
-                      leading: _buildAvatar(
-                        room.roomAvatar,
-                      ),
+                      leading: _buildAvatar(room.roomAvatar),
                       title: Text(
                         room.roomName,
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                         style: TextStyle(fontSize: 13),
                       ),
-                      subtitle: Text(
-                        room.roomLastMessage ?? '',
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                        style: TextStyle(fontSize: 11),
-                      ),
+                      subtitle: () {
+                        if (room.roomLastMessage != null) {
+                          String content = "";
+                          switch (room.roomLastMessage!.type) {
+                            case MessageType.text:
+                              content = room.roomLastMessage!.content;
+                              break;
+                            case MessageType.file:
+                              content = "[ 文件:${room.roomLastMessage!.attachments.length}个 ]";
+                              break;
+                            case MessageType.image:
+                              content = "[ 图片:${room.roomLastMessage!.attachments.length}个 ]";
+                              break;
+                            case MessageType.audio:
+                              content = "[ 语音 ]";
+                              break;
+                            case MessageType.video:
+                              content = "[ 视频:${room.roomLastMessage!.attachments.length}个 ]";
+                              break;
+                            case MessageType.quill:
+                              content = "[ 消息 ]";
+                              break;
+                            case MessageType.emoji:
+                              content = room.roomLastMessage!.content;
+                              break;
+                            case MessageType.system:
+                              content = "[ 通知 ]";
+                              break;
+                            case MessageType.aiReply:
+                              content = "[ AI ]";
+                              break;
+                          }
+                          return Text(
+                            content,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: TextStyle(fontSize: 11),
+                          );
+                        }
+                      }(),
                       trailing: Column(
                         children: [
                           /// 时间
                           Text(
-                            room.roomLastMessageTime ==
-                                    null
+                            room.roomLastMessage?.timestamp == null
                                 ? ''
-                                : DateUtil.formatTime(room.roomLastMessageTime!),
+                                : DateUtil.formatTime(
+                                  room.roomLastMessage!.timestamp!,
+                                ),
                             style: TextStyle(
                               color:
                                   widget.value.selectIndex == index

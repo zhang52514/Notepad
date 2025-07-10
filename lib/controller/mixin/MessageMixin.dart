@@ -9,7 +9,7 @@ import '../../core/websocket_service.dart';
 mixin MessageMixin on ChangeNotifier, RoomMixin {
   ///
   /// k->v k=roomId,v= List ChatMessage 聊天消息
-  Map<String, List<ChatMessage>> _roomMessages = {};
+  final Map<String, List<ChatMessage>> _roomMessages = {};
 
   get roomMessages => _roomMessages;
 
@@ -47,16 +47,19 @@ mixin MessageMixin on ChangeNotifier, RoomMixin {
       final messages = entry.value;
 
       // 1. 统计未读消息
-      final unreadCount = messages
-          .where((m) => m.status != MessageStatus.read && m.senderId != currentUserId)
-          .length;
+      final unreadCount =
+          messages
+              .where(
+                (m) =>
+                    m.status != MessageStatus.read &&
+                    m.senderId != currentUserId,
+              )
+              .length;
 
-      // 2. 获取最后一条消息及时间
-      final lastMessage = messages.isNotEmpty ? messages.last.content : "";
-      final lastMessageTime = messages.isNotEmpty && messages.last.timestamp != null
-          ? messages.last.timestamp!
-          : DateTime.fromMillisecondsSinceEpoch(0);
+      // 2. 获取最后一条消息
+      final lastMessage = messages.isNotEmpty ? messages.last : null;
 
+      
       // 3. 在会话列表中查找对应 ChatRoom
       final idx = chatroomList.indexWhere((r) => r.roomId == roomId);
       if (idx != -1) {
@@ -64,20 +67,16 @@ mixin MessageMixin on ChangeNotifier, RoomMixin {
         final room = chatroomList[idx];
         room.roomUnreadCount = unreadCount;
         room.roomLastMessage = lastMessage;
-        room.roomLastMessageTime = lastMessageTime;
       }
     }
-
-    // 4. 按最后消息时间降序排序
-    chatroomList.sort((ChatRoom a, ChatRoom b) {
-      final tA = a.roomLastMessageTime?? DateTime.fromMillisecondsSinceEpoch(0);
-      final tB = b.roomLastMessageTime?? DateTime.fromMillisecondsSinceEpoch(0);
-      return tB.compareTo(tA);
-    });
   }
 
   // 添加一条新消息到指定房间
-  void addMessage(ChatMessage message, VoidCallback scrollToBottom,String uid) {
+  void addMessage(
+    ChatMessage message,
+    VoidCallback scrollToBottom,
+    String uid,
+  ) {
     String roomId = getCurrentRoomId();
     if (!_roomMessages.containsKey(roomId)) {
       _roomMessages[roomId] = []; // 如果房间不存在，则创建一个新的消息列表

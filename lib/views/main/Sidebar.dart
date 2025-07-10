@@ -42,7 +42,7 @@ class _SidebarState extends State<Sidebar> {
         children: [
           const SizedBox(height: 16),
           // Teams 图标位置
-          Icon(Icons.groups, color: Colors.indigo),
+          HugeIcon(icon: HugeIcons.strokeRoundedChatting01,color: Colors.indigo),
           const SizedBox(height: 8),
           Expanded(
             child: ListView(

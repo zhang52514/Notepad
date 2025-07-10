@@ -13,8 +13,8 @@ abstract class AbstractMessageRenderer {
 
   Color messageColor(BuildContext context) {
     Color reverseColor =
-        ThemeUtil.isDarkMode(context) ? Colors.white : Colors.black;
-    return payload.reverse ? reverseColor : Colors.white;
+        ThemeUtil.isDarkMode(context) ? Colors.white70: Colors.black;
+    return payload.reverse ? reverseColor : Colors.white.withValues(alpha: 0.9);
   }
 }
 

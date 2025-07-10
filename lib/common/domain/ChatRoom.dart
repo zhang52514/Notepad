@@ -1,3 +1,5 @@
+import 'package:notepad/common/domain/ChatMessage.dart';
+
 import 'ChatEnumAll.dart';
 
 /// ChatRoom类代表一个聊天室的信息。
@@ -17,10 +19,7 @@ class ChatRoom {
   String? roomDescription;
 
   /// 聊天室的最后一条消息内容。
-  String? roomLastMessage;
-
-  /// 聊天室最后一条消息发送的时间。
-  DateTime? roomLastMessageTime;
+  ChatMessage? roomLastMessage;
 
   /// 聊天室的未读消息计数。
   int roomUnreadCount;
@@ -44,7 +43,6 @@ class ChatRoom {
     required this.roomAvatar,
     required this.roomDescription,
     required this.roomLastMessage,
-    required this.roomLastMessageTime,
     required this.roomUnreadCount,
     required this.roomStatus,
     required this.memberIds,
@@ -58,7 +56,6 @@ class ChatRoom {
     'roomAvatar': roomAvatar,
     'roomDescription': roomDescription,
     'roomLastMessage': roomLastMessage,
-    'roomLastMessageTime': roomLastMessageTime,
     'roomUnreadCount': roomUnreadCount,
     'roomStatus': roomStatus.name,
     'roomType': roomType.name,
@@ -72,30 +69,26 @@ class ChatRoom {
       roomName: json['roomName'] ?? '',
       roomAvatar: json['roomAvatar'] ?? '',
       roomDescription: json['roomDescription'] ?? '',
-      roomLastMessage: json['roomLastMessage'] ?? '',
-      // 这里json里如果没有roomLastMessageTime或为空，默认当前时间，避免异常
-      roomLastMessageTime: json['roomLastMessageTime'] != null
-          ? DateTime.parse(json['roomLastMessageTime'])
-          : DateTime.now(),
-      // 这个字段示例中没出现，给默认值0
       roomUnreadCount: json['roomUnreadCount'] ?? 0,
-      roomStatus: json['roomStatus'] != null
-          ? ChatRoomStatus.values.byName(json['roomStatus'])
-          : ChatRoomStatus.normal, // 根据你枚举定义给默认值
-      roomType: json['roomType'] != null
-          ? ChatRoomType.values.byName(json['roomType'])
-          : ChatRoomType.single, // 根据你枚举定义给默认值
-      memberIds: json['memberIds'] != null
-          ? List<String>.from(json['memberIds'])
-          : [],
-      memberRoles: json['memberRoles'] != null
-          ? Map<String, ChatUserRole>.from(
-        (json['memberRoles'] as Map).map(
-              (k, v) => MapEntry(k, ChatUserRole.values.byName(v)),
-        ),
-      )
-          : {},
+      roomStatus:
+          json['roomStatus'] != null
+              ? ChatRoomStatus.values.byName(json['roomStatus'])
+              : ChatRoomStatus.normal, // 根据你枚举定义给默认值
+      roomType:
+          json['roomType'] != null
+              ? ChatRoomType.values.byName(json['roomType'])
+              : ChatRoomType.single, // 根据你枚举定义给默认值
+      memberIds:
+          json['memberIds'] != null ? List<String>.from(json['memberIds']) : [],
+      memberRoles:
+          json['memberRoles'] != null
+              ? Map<String, ChatUserRole>.from(
+                (json['memberRoles'] as Map).map(
+                  (k, v) => MapEntry(k, ChatUserRole.values.byName(v)),
+                ),
+              )
+              : {},
+      roomLastMessage: null,
     );
   }
-
 }

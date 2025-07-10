@@ -27,7 +27,7 @@ class ChatController extends ChangeNotifier
 
     ///接受消息监听
     _ws.addListener((msg) {
-      print("Chat new Message:$msg");
+      // print("Chat new Message:$msg");
 
       if (msg.code == "200") {
         final raw = msg.data;

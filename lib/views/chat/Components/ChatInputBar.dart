@@ -7,7 +7,6 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:mime/mime.dart';
-import 'package:notepad/common/domain/ChatMessage.dart';
 import 'package:notepad/common/module/AnoToast.dart';
 import 'package:notepad/common/module/ColorsBox.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';

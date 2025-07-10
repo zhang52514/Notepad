@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:notepad/common/module/AnoToast.dart';
 import 'package:web_socket_channel/status.dart' as status_;
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -149,8 +150,9 @@ class WebSocketService {
     for (var listener in listenersCopy) {
       try {
         listener(message);
-      } catch (e) {
+      } catch (e, stackTrace) {
         _log("订阅异常: $e");
+        debugPrintStack(stackTrace: stackTrace, label: '订阅异常堆栈');
       }
     }
   }
@@ -185,8 +187,9 @@ class WebSocketService {
     for (var listener in _statusListeners) {
       try {
         listener(newStatus);
-      } catch (e) {
+      } catch (e, stackTrace) {
         _log("状态订阅异常: $e");
+        debugPrintStack(stackTrace: stackTrace, label: '状态订阅异常堆栈');
       }
     }
   }

@@ -202,7 +202,6 @@ class MainController extends ChangeNotifier {
       dialogTheme: DialogTheme(
         actionsPadding: const EdgeInsets.all(8),
         elevation: 4,
-        backgroundColor: Colors.white, // 设置对话框的背景颜色
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(4), // 设置对话框的圆角
         ),
@@ -224,6 +223,6 @@ class MainController extends ChangeNotifier {
     // if (brightnessString == 'light') {
     //   return Brightness.light;
     // }
-    return Brightness.dark;
+    return Brightness.light;
   }
 }

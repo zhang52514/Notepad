@@ -1,25 +1,14 @@
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/utils/FormatUtil.dart';
 import 'package:notepad/common/utils/MimeTypeIconProvider.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart'; // 假设这个是用于判断深色模式的工具类
 import 'package:notepad/views/chat/ChatMessage/AbstractMessageRenderer.dart';
 
 class FileMessageRenderer extends AbstractMessageRenderer {
   FileMessageRenderer(super.payload);
-
-  String _formatBytes(int bytes, int decimals) {
-    if (bytes <= 0) return "0 B";
-    const suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-
-    final i = (bytes > 0 ? (log(bytes) / log(1024)).floor() : 0);
-    final effectiveIndex = i.clamp(0, suffixes.length - 1);
-    final double value = bytes / pow(1024, effectiveIndex);
-
-    return '${value.toStringAsFixed(decimals)} ${suffixes[effectiveIndex]}';
-  }
 
   @override
   Widget render(BuildContext context) {
@@ -37,8 +26,7 @@ class FileMessageRenderer extends AbstractMessageRenderer {
         final String fileName = fileUrl.split(RegExp(r'[\\/]+')).last;
         final bool isDarkMode = ThemeUtil.isDarkMode(context);
 
-        // --- 核心颜色调整 ---
-        final Color textColor = isDarkMode ? Colors.white.withOpacity(0.9) : Colors.black87; // 深色模式下文字略微不那么亮白，更柔和
+      
         final Color cardBackgroundColor = isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey.shade100; // 深色卡片背景更深一些
         final Color borderColor = isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300; // 边框颜色
         final Color shadowColor = isDarkMode ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.05); // 深色模式下阴影更明显但柔和
@@ -69,7 +57,7 @@ class FileMessageRenderer extends AbstractMessageRenderer {
                 MimeTypeIconProvider.getIconForMimeType(
                   file.type,
                   size: 24, // 图标尺寸使用 sp，与文本大小一致性更好
-                  color: textColor,
+                  color: messageColor(context), // 使用消息颜色
                 ),
                 SizedBox(width: 8.w), // 图标和文本之间的间距稍微缩小一点，更紧凑
 
@@ -83,17 +71,17 @@ class FileMessageRenderer extends AbstractMessageRenderer {
                         style: TextStyle(
                           fontSize: 13, // 字体大小也用 sp
                           fontWeight: FontWeight.w600,
-                          color: textColor,
+                          color:  messageColor(context), // 使用消息颜色
                         ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       ),
                       SizedBox(height: 2.h),
                       Text(
-                        _formatBytes(file.size, 2),
+                        FormatUtil.formatBytes(file.size, 2),
                         style: TextStyle(
-                          fontSize: 11, // 字体大小也用 sp，略小一点
-                          color: textColor.withOpacity(0.6), // 文件大小颜色更淡一些
+                          fontSize: 11,
+                          color: messageColor(context).withValues(alpha: 0.6), // 文件大小颜色更淡一些
                         ),
                       ),
                     ],
@@ -113,7 +101,7 @@ class FileMessageRenderer extends AbstractMessageRenderer {
                   },
                   icon: HugeIcon(
                     icon: HugeIcons.strokeRoundedDownload01,
-                    color: textColor, // 统一使用 iconColor
+                    color:  messageColor(context), // 使用消息颜色
                   ),
                 )
               ],

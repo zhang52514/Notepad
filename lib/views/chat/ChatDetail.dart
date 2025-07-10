@@ -10,6 +10,8 @@ import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/ChatMessageBubble.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/MessagePayload.dart';
 import 'package:notepad/views/chat/Components/ChatInputBar.dart';
+import 'package:notepad/views/chat/Components/WelcomePage.dart';
+import 'package:notepad/views/chat/Components/NoDataPage.dart';
 import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
@@ -55,8 +57,7 @@ class _ChatDetailState extends State<ChatDetail> {
 
         //  现在 visibleMessages 就是当前屏幕上显示的消息
         for (var msg in visibleMessages) {
-          if (msg.status == MessageStatus.delivered &&
-              msg.senderId != ctl.authController.currentUser!.id) {
+          if (msg.status == MessageStatus.delivered && msg.senderId != ctl.authController.currentUser!.id) {
             debugPrint('👀 当前可见消息：${msg.messageId}');
           }
         }
@@ -72,7 +73,7 @@ class _ChatDetailState extends State<ChatDetail> {
       final value = widget.chatController;
       //未选择任何ChatRoom
       if (value.chatRoom == null) {
-        return Center(child: Text("欢迎"));
+        return const WelcomePage();
       }
       //当前选择的ChatRoom
       ChatRoom room = value.chatRoom;
@@ -112,7 +113,7 @@ class _ChatDetailState extends State<ChatDetail> {
         body: () {
           //如果消息列表为空 显示提示
           if (chatMessages.isEmpty) {
-            return Center(child: Text("暂无数据"));
+            return const NoDataPage();
           }
           //获取当前用户
           ChatUser user = value.authController.currentUser!;
