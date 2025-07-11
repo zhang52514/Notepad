@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:notepad/common/domain/ChatEnumAll.dart';
 import 'package:notepad/common/module/VibratingBadge.dart';
 import 'package:notepad/common/utils/DateUtil.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
+import 'package:notepad/views/chat/Components/LastMessagePreview.dart';
 
 import '../../common/module/AvatarWidget.dart';
 
@@ -72,48 +72,14 @@ class _ChatListState extends State<ChatList> {
                         room.roomName,
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
-                        style: TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 14),
                       ),
-                      subtitle: () {
-                        if (room.roomLastMessage != null) {
-                          String content = "";
-                          switch (room.roomLastMessage!.type) {
-                            case MessageType.text:
-                              content = room.roomLastMessage!.content;
-                              break;
-                            case MessageType.file:
-                              content = "[ 文件:${room.roomLastMessage!.attachments.length}个 ]";
-                              break;
-                            case MessageType.image:
-                              content = "[ 图片:${room.roomLastMessage!.attachments.length}个 ]";
-                              break;
-                            case MessageType.audio:
-                              content = "[ 语音 ]";
-                              break;
-                            case MessageType.video:
-                              content = "[ 视频:${room.roomLastMessage!.attachments.length}个 ]";
-                              break;
-                            case MessageType.quill:
-                              content = "[ 消息 ]";
-                              break;
-                            case MessageType.emoji:
-                              content = room.roomLastMessage!.content;
-                              break;
-                            case MessageType.system:
-                              content = "[ 通知 ]";
-                              break;
-                            case MessageType.aiReply:
-                              content = "[ AI ]";
-                              break;
-                          }
-                          return Text(
-                            content,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: TextStyle(fontSize: 11),
-                          );
-                        }
-                      }(),
+                      subtitle: LastMessagePreview(
+                        lastMessage: room.roomLastMessage,
+                        currentUser: widget.value.authController.currentUser,
+                        getUserById: (String senderId)=>widget.value.getUser(senderId),
+                        textColor: widget.value.selectIndex == index?Colors.white:Colors.grey.shade700,
+                      ),
                       trailing: Column(
                         children: [
                           /// 时间

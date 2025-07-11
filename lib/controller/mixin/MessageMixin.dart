@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:notepad/common/domain/ChatRoom.dart';
 import 'package:notepad/controller/mixin/RoomMixin.dart';
 
 import '../../common/domain/ChatEnumAll.dart';

@@ -16,7 +16,7 @@ class QuillMessageRenderer extends AbstractMessageRenderer {
   QuillMessageRenderer(super.payload);
 
   @override
-  Widget render(BuildContext context) { // 将 render 方法更名为 build，更符合Flutter Widget生命周期
+  Widget render(BuildContext context) {
     // 设置为只读模式
     _controller.readOnly = true;
 

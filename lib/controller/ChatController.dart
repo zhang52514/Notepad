@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_list_view/flutter_list_view.dart';
 import 'package:notepad/controller/AuthController.dart';
 import 'package:notepad/controller/mixin/MessageMixin.dart';
 import 'package:notepad/controller/mixin/RoomMixin.dart';
 import 'package:notepad/controller/mixin/UserMixin.dart';
-import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../common/domain/ChatEnumAll.dart';
 import '../common/domain/ChatMessage.dart';
@@ -17,7 +17,6 @@ import '../core/websocket_service.dart';
 /// ChatController core controller
 class ChatController extends ChangeNotifier
     with UserMixin, RoomMixin, MessageMixin {
-
   final WebSocketService _ws = WebSocketService();
   late AuthController authController;
 
@@ -63,33 +62,38 @@ class ChatController extends ChangeNotifier
       "content": message.content,
       "type": message.type.name,
       "roomId": chatRoom?.roomId,
-      "status":message.status.name,
-      "attachments":message.attachments,
-      "read":message.read,
-      "metadata":message.metadata
+      "status": message.status.name,
+      "attachments": message.attachments,
+      "read": message.read,
+      "metadata": message.metadata,
     });
-    
   }
 
   void sendMessageRead() {}
 
   ///ListView 控制器 左侧列表
   final ScrollController scrollChatListController = ScrollController();
-  final ItemScrollController itemScrollController = ItemScrollController();
-  final ItemPositionsListener itemPositionsListener =
-      ItemPositionsListener.create();
+
+  final FlutterListViewController listViewController =
+      FlutterListViewController();
+
+
+  bool showScrollToBottom = true;
+
+  void setScrollToBottom(bool isBottom) {
+    showScrollToBottom = isBottom;
+    notifyListeners();
+  }
 
   ///
   /// 滚动到顶部
   void scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (itemScrollController.isAttached) {
-        itemScrollController.scrollTo(
-          index: 0,
-          duration: Duration(milliseconds: 500),
-          curve: Curves.easeInOutCubic,
-        );
-      }
+      listViewController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
   }
 
@@ -131,8 +135,8 @@ class ChatController extends ChangeNotifier
 
   @override
   void dispose() {
-    scrollChatListController.dispose();
     _scrollStopTimer?.cancel();
+    listViewController.dispose();
     super.dispose();
   }
 }
