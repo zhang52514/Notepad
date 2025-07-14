@@ -9,6 +9,7 @@ import 'package:notepad/controller/AuthController.dart';
 import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/controller/MainController.dart';
 import 'package:notepad/controller/RtcController.dart';
+import 'package:notepad/core/SimpleFileLogger.dart';
 import 'package:notepad/views/MainNavigatorWidgetWindows.dart';
 import 'package:notepad/views/chat/ChatMessage/AudioMessageRenderer.dart';
 import 'package:notepad/views/chat/ChatMessage/EmojiMessageRenderer.dart';
@@ -31,6 +32,7 @@ BuildContext get globalContext => navigatorKey.currentContext!;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SimpleFileLogger.initialize(); // 初始化日志记录器
   await SpUtil.getInstance();
   registerAllMessageRenderers();
 

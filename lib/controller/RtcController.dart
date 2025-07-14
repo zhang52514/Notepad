@@ -2,12 +2,18 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:notepad/core/SimpleFileLogger.dart';
 
 typedef SignalSender = Function(Map<String, dynamic> signal);
 
 /// WebRTC 模型控制器，用于处理视频通话、媒体流初始化、ICE候选、屏幕共享等逻辑。
 /// 配合 Provider 使用，自动通知 UI 更新状态。
 class RtcCallController extends ChangeNotifier {
+  void _debugLog(String label, [String? value]) {
+    final timestamp = DateTime.now().toIso8601String();
+    SimpleFileLogger.log('[WebRTC][$timestamp] $label ${value ?? ''}');
+  }
+
   bool _inCalling = false;
   bool get inCalling => _inCalling;
 
@@ -64,7 +70,7 @@ class RtcCallController extends ChangeNotifier {
     bool isOffer = false,
     required SignalSender onSignalSend,
   }) async {
-    print('[RtcCallController] 初始化呼叫。isOffer: $isOffer');
+    SimpleFileLogger.log('[RtcCallController] 初始化呼叫。isOffer: $isOffer');
     await _getUserMedia();
     await _createPeerConnection(onSignalSend);
     if (isOffer) {
@@ -88,22 +94,27 @@ class RtcCallController extends ChangeNotifier {
   /// 创建 WebRTC peer connection，并绑定事件处理器
   Future<void> _createPeerConnection(SignalSender onSignalSend) async {
     if (_peerConnection != null) {
-      print('[RtcCallController] PeerConnection 已存在，跳过创建。');
+      SimpleFileLogger.log('[RtcCallController] PeerConnection 已存在，跳过创建。');
       return;
     }
 
     _peerConnection = await createPeerConnection(_iceServers);
-    print('[RtcCallController] PeerConnection 已创建。');
+    // _peerConnection = await createPeerConnection({});
+    SimpleFileLogger.log('[RtcCallController] PeerConnection 已创建。');
 
     // 添加本地音视频轨道
     _localStream?.getTracks().forEach((track) {
+      track.enabled = true;
       _peerConnection!.addTrack(track, _localStream!);
-      print('[RtcCallController] 添加本地轨道: ${track.id}');
+      _debugLog(
+        '🎬 添加本地轨道',
+        'kind=${track.kind}, id=${track.id}, enabled=${track.enabled}',
+      );
     });
 
     // 监听 ICE 候选（需要通过信令发送给远端）
     _peerConnection!.onIceCandidate = (candidate) {
-      print('[WebRTC] ICE 候选: ${candidate.toMap()}');
+      SimpleFileLogger.log('[WebRTC] ICE 候选: ${candidate.toMap()}');
       // 通过信令发送 ICE Candidate
       onSignalSend({
         'type': 'candidate',
@@ -113,39 +124,45 @@ class RtcCallController extends ChangeNotifier {
       });
     };
 
-    // 接收到远程媒体流时绑定到远程渲染器
-    _peerConnection!.onAddStream = (stream) {
-      print('----- DEBUG: onAddStream callback triggered! Stream ID: ${stream.id}'); // 新增的调试日志
-      print('[WebRTC] 远程流已接收： ${stream.id}');
-      _remoteRenderer.srcObject = stream;
-      notifyListeners(); // 通知 UI 展示远端视频
-    };
+    // // 接收到远程媒体流时绑定到远程渲染器
+    // _peerConnection!.onAddStream = (stream) {
+    //   SimpleFileLogger.log(
+    //     '----- DEBUG: onAddStream callback triggered! Stream ID: ${stream.id}',
+    //   ); // 新增的调试日志
+    //   SimpleFileLogger.log('[WebRTC] 远程流已接收： ${stream.id}');
+    //   _remoteRenderer.srcObject = stream;
+    //   notifyListeners(); // 通知 UI 展示远端视频
+    // };
 
     _peerConnection!.onTrack = (RTCTrackEvent event) {
-    if (event.track.kind == 'video') {
-        print('----- DEBUG: onTrack video callback triggered! Stream ID: ${event.streams.first.id}, Track ID: ${event.track.id}');
-        // 通常 WebRTC 的 stream 可能会包含多个 track，你需要找到视频 track 所属的 stream
-        _remoteRenderer.srcObject = event.streams.first; // 确保取到正确的 stream
+      if (event.track.kind == 'video') {
+        _debugLog(
+          '📺 onTrack - 收到远程视频轨道',
+          'trackId=${event.track.id}, streamId=${event.streams.first.id}',
+        );
+        _remoteRenderer.srcObject = event.streams.first;
         notifyListeners();
-    }
-};
+      } else {
+        _debugLog('📡 onTrack - 收到非视频轨道', 'kind=${event.track.kind}');
+      }
+    };
 
     // 监听连接状态变更
     _peerConnection!.onConnectionState = (state) {
-      print('[WebRTC] 连接状态： $state');
+      SimpleFileLogger.log('[WebRTC] 连接状态： $state');
       if ([
         RTCPeerConnectionState.RTCPeerConnectionStateDisconnected,
         RTCPeerConnectionState.RTCPeerConnectionStateFailed,
         RTCPeerConnectionState.RTCPeerConnectionStateClosed,
       ].contains(state)) {
-        print('[WebRTC] PeerConnection 已断开、失败或关闭。挂断.');
+        SimpleFileLogger.log('[WebRTC] PeerConnection 已断开、失败或关闭。挂断.');
         hangUp(); // 连接断开、失败或关闭时自动挂断
       }
       notifyListeners(); // 刷新连接状态 UI
     };
 
     _peerConnection!.onIceConnectionState = (state) {
-      print('[WebRTC] ICE连接状态：$state');
+      SimpleFileLogger.log('[WebRTC] ICE连接状态：$state');
       notifyListeners();
     };
   }
@@ -153,12 +170,17 @@ class RtcCallController extends ChangeNotifier {
   /// 创建 Offer（主叫方使用）并设置本地 SDP
   Future<void> createOffer(SignalSender onSignalSend) async {
     if (_peerConnection == null) {
-      print('[WebRTC] PeerConnection 为空，无法创建offer。');
+      _debugLog('❌ createOffer - PeerConnection为空');
       return;
     }
+
+    _debugLog('🎥 createOffer - 开始创建 Offer');
+
     final offer = await _peerConnection!.createOffer();
     await _peerConnection!.setLocalDescription(offer);
-    print('[WebRTC] 创建 offer： ${offer.toMap()}');
+
+    _debugLog('✅ createOffer - SDP 设置成功，类型: ${offer.type}');
+    _debugLog('🔼 createOffer - 发送 Offer 信令');
     // 通过信令发送 Offer
     onSignalSend(offer.toMap());
   }
@@ -168,7 +190,7 @@ class RtcCallController extends ChangeNotifier {
     Map<String, dynamic> data,
     SignalSender onSignalSend,
   ) async {
-    print('[WebRTC] 处理传入的 offer： ${data['type']}');
+    SimpleFileLogger.log('[WebRTC] 处理传入的 offer： ${data['type']}');
     if (_peerConnection == null) {
       await _createPeerConnection(
         onSignalSend,
@@ -177,41 +199,44 @@ class RtcCallController extends ChangeNotifier {
     await _peerConnection!.setRemoteDescription(
       RTCSessionDescription(data['sdp'], data['type']),
     );
-    print('[WebRTC] 设置远程描述（offer）.');
+    SimpleFileLogger.log('[WebRTC] 设置远程描述（offer）.');
     await _createAnswer(onSignalSend); // 收到 Offer 后创建并发送 Answer
   }
 
   /// 创建 Answer 响应 Offer，并设置本地 SDP
   Future<void> _createAnswer(SignalSender onSignalSend) async {
     if (_peerConnection == null) {
-      print('[WebRTC] PeerConnection 为空，无法创建 answer.');
+      _debugLog('❌ createAnswer - PeerConnection为空');
       return;
     }
+    _debugLog('🎥 createAnswer - 开始创建 Answer');
     final answer = await _peerConnection!.createAnswer();
     await _peerConnection!.setLocalDescription(answer);
-    print('[WebRTC] 创建 answer: ${answer.toMap()}');
+
+    _debugLog('✅ createAnswer - SDP 设置成功，类型: ${answer.type}');
+    _debugLog('🔼 createAnswer - 发送 Answer 信令');
     // 通过信令发送 Answer
     onSignalSend(answer.toMap());
   }
 
   /// 处理对方返回的 Answer
   Future<void> handleAnswer(Map<String, dynamic> data) async {
-    print('[WebRTC] 处理传入 answer: ${data['type']}');
+    _debugLog('📥 handleAnswer - 接收 Answer');
     if (_peerConnection == null) {
-      print('[WebRTC] PeerConnection 为空，无法处理 answer.');
+      _debugLog('❌ handleAnswer - PeerConnection为空');
       return;
     }
     await _peerConnection?.setRemoteDescription(
       RTCSessionDescription(data['sdp'], data['type']),
     );
-    print('[WebRTC] 设置远程描述 (Answer).');
+    _debugLog('✅ handleAnswer - 设置远程 SDP 成功');
   }
 
   /// 处理接收到的 ICE 候选信息
   Future<void> handleCandidate(Map<String, dynamic> data) async {
-    print('[WebRTC] 处理新候选人: ${data['candidate']}');
+    _debugLog('📥 handleCandidate - 接收 ICE 候选');
     if (_peerConnection == null) {
-      print('[WebRTC] PeerConnection 为空，无法添加候选.');
+      _debugLog('❌ handleCandidate - PeerConnection为空');
       return;
     }
     final candidate = RTCIceCandidate(
@@ -220,7 +245,8 @@ class RtcCallController extends ChangeNotifier {
       data['sdpMlineIndex'],
     );
     await _peerConnection?.addCandidate(candidate);
-    print('[WebRTC] 添加了 ICE 候选.');
+
+    _debugLog('✅ handleCandidate - 添加候选成功');
   }
 
   /// 统一处理接收到的 WebRTC 信令
@@ -228,7 +254,7 @@ class RtcCallController extends ChangeNotifier {
     Map<String, dynamic> signalData,
     SignalSender onSignalSend,
   ) {
-    print('[RtcCallController] 接收信号: ${signalData['type']}');
+    SimpleFileLogger.log('[RtcCallController] 接收信号: ${signalData['type']}');
     if (!signalData.containsKey('type')) return;
     switch (signalData['type']) {
       case 'offer':
@@ -241,13 +267,15 @@ class RtcCallController extends ChangeNotifier {
         handleCandidate(signalData);
         break;
       default:
-        print('[RtcCallController] 未知信号类型: ${signalData['type']}');
+        SimpleFileLogger.log(
+          '[RtcCallController] 未知信号类型: ${signalData['type']}',
+        );
     }
   }
 
   /// 挂断通话：关闭 Peer、清理资源
   void hangUp() {
-    print('[WebRTC] 已发起挂断.');
+    SimpleFileLogger.log('[WebRTC] 已发起挂断.');
     _cleanUp();
     _inCalling = false;
     notifyListeners();
@@ -274,7 +302,7 @@ class RtcCallController extends ChangeNotifier {
 
     // 重新初始化渲染器，确保下次通话时状态正确
     _initializeRenderers();
-    print('[WebRTC] 资源已清理.');
+    SimpleFileLogger.log('[WebRTC] 资源已清理.');
   }
 
   /// 启动屏幕共享截图流程（通过平台通道截图）
@@ -286,7 +314,7 @@ class RtcCallController extends ChangeNotifier {
   /// 3. 将视频帧数据添加到 WebRTC 的 MediaStreamTrack 中。
   void startScreenShare(Future<Uint8List?> Function() captureFrame) async {
     if (_peerConnection == null) {
-      print('[ScreenShare]PeerConnection 未初始化.');
+      SimpleFileLogger.log('[ScreenShare]PeerConnection 未初始化.');
       return;
     }
 
@@ -323,7 +351,7 @@ class RtcCallController extends ChangeNotifier {
           _peerConnection!.addTrack(_screenTrack!, _localStream!);
           _localRenderer.srcObject = _localStream; // 更新本地预览以显示屏幕共享
           notifyListeners();
-          print('[ScreenShare] 通过 getDisplayMedia 开始屏幕共享并替换轨道.');
+          SimpleFileLogger.log('[ScreenShare] 通过 getDisplayMedia 开始屏幕共享并替换轨道.');
         });
         // 添加新的屏幕共享轨道
         _peerConnection!.addTrack(_screenTrack!, _localStream!);
@@ -334,9 +362,9 @@ class RtcCallController extends ChangeNotifier {
       }
       _localRenderer.srcObject = _localStream; // 更新本地预览以显示屏幕共享
       notifyListeners();
-      print('[ScreenShare] 通过 getDisplayMedia 开始屏幕共享。');
+      SimpleFileLogger.log('[ScreenShare] 通过 getDisplayMedia 开始屏幕共享。');
     } catch (e) {
-      print('[ScreenShare]无法获取 DisplayMedia: $e。回退到手动捕获（未实现）.');
+      SimpleFileLogger.log('[ScreenShare]无法获取 DisplayMedia: $e。回退到手动捕获（未实现）.');
       // 如果 getDisplayMedia 失败，可以尝试手动截图并编码
       // _screenCaptureTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
       //   final frame = await captureFrame();
@@ -351,7 +379,7 @@ class RtcCallController extends ChangeNotifier {
 
   /// 停止屏幕共享
   void stopScreenShare() async {
-    print('[ScreenShare]停止屏幕共享.');
+    SimpleFileLogger.log('[ScreenShare]停止屏幕共享.');
     _screenCaptureTimer?.cancel();
     _screenCaptureTimer = null;
 
@@ -365,7 +393,7 @@ class RtcCallController extends ChangeNotifier {
             // 检查这个 sender 是否正在发送我们的屏幕共享轨道
             if (sender.track == _screenTrack) {
               _peerConnection!.removeTrack(sender);
-              print('[ScreenShare] 删除了屏幕共享轨道发送器.');
+              SimpleFileLogger.log('[ScreenShare] 删除了屏幕共享轨道发送器.');
               break; // 找到并移除后即可退出循环
             }
           }
@@ -376,13 +404,15 @@ class RtcCallController extends ChangeNotifier {
         // 最佳实践是先移除旧的摄像头 sender（如果存在），然后添加新的
         // 这里简化处理，直接获取摄像头流并添加到 _localStream 和 peerConnection
         try {
-          final constraints = {
-            'audio': true, // 如果你的本地流一直包含音频
-            'video': {'facingMode': 'user'}, // 默认使用前置摄像头
-          };
-          final newCameraStream = await navigator.mediaDevices.getUserMedia(
-            constraints,
-          );
+          final newCameraStream = await navigator.mediaDevices.getUserMedia({
+            'audio': true,
+            'video': {
+              'facingMode': 'user',
+              'width': 640,
+              'height': 480,
+              'frameRate': 30,
+            },
+          });
 
           // 先清理 _localStream 中旧的视频轨道（如果有的话），避免重复
           _localStream!.getVideoTracks().forEach((track) {
@@ -392,7 +422,7 @@ class RtcCallController extends ChangeNotifier {
               for (var sender in senders) {
                 if (sender.track == track) {
                   _peerConnection!.removeTrack(sender);
-                  print('[ScreenShare]删除了旧的摄像机轨迹发送器.');
+                  SimpleFileLogger.log('[ScreenShare]删除了旧的摄像机轨迹发送器.');
                   break;
                 }
               }
@@ -408,13 +438,13 @@ class RtcCallController extends ChangeNotifier {
           // 将新摄像头流的所有轨道添加到 PeerConnection
           _localStream!.getTracks().forEach((track) {
             _peerConnection!.addTrack(track, _localStream!);
-            print('[ScreenShare] 添加了新的摄像机轨迹: ${track.kind}.');
+            SimpleFileLogger.log('[ScreenShare] 添加了新的摄像机轨迹: ${track.kind}.');
           });
 
           _localRenderer.srcObject = _localStream; // 更新本地预览
-          print('[ScreenShare] 切换回相机流.');
+          SimpleFileLogger.log('[ScreenShare] 切换回相机流.');
         } catch (e) {
-          print('[ScreenShare] 停止屏幕共享后无法获取摄像头流: $e');
+          SimpleFileLogger.log('[ScreenShare] 停止屏幕共享后无法获取摄像头流: $e');
         }
       }
       _screenTrack = null; // 清空屏幕共享轨道引用

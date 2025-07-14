@@ -103,6 +103,10 @@ class ChatController extends ChangeNotifier
           );
         });
       }
+    } else if (msg.type == MessageType.videoAnswer) {
+      // 对方已接听，可切换 UI 状态或提示
+    } else if (msg.type == MessageType.videoReject) {
+      // 对方拒绝通话，做出 UI 提示并清理通话状态
     }
   }
 
@@ -116,7 +120,7 @@ class ChatController extends ChangeNotifier
           onPressed: () {
             Navigator.pop(main.globalContext);
             // 拒绝通话，发送挂断信令
-            sendVideoHangup(msg.senderId);
+            sendVideoHangup();
             AnoToast.showToast("已拒绝通话", type: ToastType.info);
           },
           child: const Text("拒绝"),
@@ -209,7 +213,7 @@ class ChatController extends ChangeNotifier
   }
 
   /// 发送视频通话挂断/拒绝信令
-  void sendVideoHangup(String receiverId) {
+  void sendVideoHangup() {
     final currentUser = authController.currentUser;
     if (currentUser == null) return;
 
