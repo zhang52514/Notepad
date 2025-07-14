@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_list_view/flutter_list_view.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/domain/ChatEnumAll.dart';
 
 import 'package:notepad/common/domain/ChatMessage.dart';
 import 'package:notepad/common/domain/ChatRoom.dart';
@@ -118,12 +119,40 @@ class _ChatDetailState extends State<ChatDetail> {
         backgroundColor: themeColor,
         title: Text(room.roomName),
         actions: [
+          IconButton(
+            tooltip: "视频通话",
+            onPressed: ctl.rtcCallController.isConnected // 如果已经连接，则禁用发起通话按钮
+                ? null
+                : () {
+                    ctl.sendVideoCallRequest(); // 发起视频通话请求，RtcCallController 会负责显示弹窗
+                  },
+            icon: const HugeIcon(
+              icon: HugeIcons.strokeRoundedVideo02,
+              size: 20,
+            ),
+          ),
+          IconButton(
+            tooltip: "语音通话",
+            onPressed: () {
+              // TODO: Implement voice call logic
+            },
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedCall02, size: 20),
+          ),
           // 使用 GlobalKey 控制 endDrawer 打开
           IconButton(
             onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-            icon: const Icon(Icons.group),
+            icon: const HugeIcon(
+              icon: HugeIcons.strokeRoundedAddTeam,
+              size: 20,
+            ),
           ),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.more_horiz)),
+          IconButton(
+            onPressed: () {},
+            icon: const HugeIcon(
+              icon: HugeIcons.strokeRoundedMoreHorizontal,
+              size: 22,
+            ),
+          ),
         ],
       ),
       endDrawer: Padding(
@@ -204,16 +233,16 @@ class _ChatDetailState extends State<ChatDetail> {
             Align(
               alignment: Alignment.bottomRight,
               child: Padding(
-                padding: EdgeInsets.only(right: 3.w,bottom: 2.h), // 距离底部的位置
-                child: FloatingActionButton(
-                  mini: true,
-                  backgroundColor: Colors.transparent,
+                padding: EdgeInsets.only(right: 5.w, bottom: 2.h), // 距离底部的位置
+                child: IconButton(
+                  tooltip: "回到底部",
                   onPressed: _scrollToBottomAnimated,
-                  child: const HugeIcon(
-                    icon: HugeIcons.strokeRoundedDownloadSquare01,
-                    color: Colors.indigo,
-                    size: 20,
+                  icon: HugeIcon(
+                    icon: HugeIcons.strokeRoundedArrowDown01,
+                    size: 18, // 设置图标尺寸
                   ),
+                  padding: EdgeInsets.all(4), // 缩小点击区域 padding
+                  constraints: BoxConstraints(), // 去除默认最小约束
                 ),
               ),
             ),
@@ -244,7 +273,7 @@ class _ChatDetailState extends State<ChatDetail> {
 
       if (visibleItems == null) return;
 
-      ctl.setScrollToBottom(visibleItems.any((i) => i == 0));
+      ctl.setScrollToBottom(visibleItems.any((i) => i < 5));
 
       for (final index in visibleItems) {
         if (index < 0 || index >= displayItems.length) continue;
@@ -264,5 +293,29 @@ class _ChatDetailState extends State<ChatDetail> {
     final diff = newer.timestamp!.difference(older.timestamp!);
     return diff.inMinutes.abs() > 30 ||
         !DateUtil.isSameDay(newer.timestamp!, older.timestamp!);
+  }
+
+  Future<void> showCallerDialog({
+    required BuildContext context,
+    required VoidCallback onCancel,
+  }) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text("视频通话中..."),
+            content: const Text("等待对方接听"),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  onCancel(); // 调用回调
+                },
+                child: const Text("取消通话"),
+              ),
+            ],
+          ),
+    );
   }
 }

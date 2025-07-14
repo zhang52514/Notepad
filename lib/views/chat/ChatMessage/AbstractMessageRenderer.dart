@@ -13,7 +13,7 @@ abstract class AbstractMessageRenderer {
 
   Color messageColor(BuildContext context) {
     Color reverseColor =
-        ThemeUtil.isDarkMode(context) ? Colors.white70: Colors.black;
+        ThemeUtil.isDarkMode(context) ? Colors.white70 : Colors.black;
     return payload.reverse ? reverseColor : Colors.white.withValues(alpha: 0.9);
   }
 }
@@ -43,7 +43,7 @@ class MessageRendererRegistry {
           reverse: true,
           content: '暂不支持的消息类型: ${payload.type}',
           metadata: payload.metadata,
-          attachments: payload.attachments
+          attachments: payload.attachments,
         ),
       );
     }

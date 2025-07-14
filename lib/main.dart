@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notepad/controller/AuthController.dart';
 import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/controller/MainController.dart';
+import 'package:notepad/controller/RtcController.dart';
 import 'package:notepad/views/MainNavigatorWidgetWindows.dart';
 import 'package:notepad/views/chat/ChatMessage/AudioMessageRenderer.dart';
 import 'package:notepad/views/chat/ChatMessage/EmojiMessageRenderer.dart';
@@ -23,6 +24,10 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'controller/CQController.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+BuildContext get globalContext => navigatorKey.currentContext!;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,7 +94,7 @@ void registerAllMessageRenderers() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  MyApp({super.key});
 
   // This widget is the root of your application.
   @override
@@ -102,15 +107,28 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<AuthController>(
           create: (ctx) => AuthController(),
         ),
-        ChangeNotifierProxyProvider<AuthController, ChatController>(
+        ChangeNotifierProvider<RtcCallController>(
+          create: (ctx) => RtcCallController(),
+        ),
+        ChangeNotifierProxyProvider2<
+          AuthController,
+          RtcCallController,
+          ChatController
+        >(
           create:
-              (ctx) =>
-                  ChatController(authController: ctx.read<AuthController>()),
-          update: (_, authController, previous) {
+              (ctx) => ChatController(
+                authController: ctx.read<AuthController>(),
+                rtcCallController: ctx.read<RtcCallController>(),
+              ),
+          update: (_, authController, rtcCallController, previous) {
             if (previous == null) {
-              return ChatController(authController: authController);
+              return ChatController(
+                authController: authController,
+                rtcCallController: rtcCallController,
+              );
             } else {
               previous.authController = authController;
+              previous.rtcCallController = rtcCallController;
               return previous;
             }
           },
@@ -124,6 +142,7 @@ class MyApp extends StatelessWidget {
           ///获取主题
           appInfo.setBrightness(appInfo.getBrightnessStart(), now: false);
           return MaterialApp(
+            navigatorKey: navigatorKey,
             debugShowCheckedModeBanner: false,
             builder: BotToastInit(),
             navigatorObservers: [BotToastNavigatorObserver()],

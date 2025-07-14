@@ -20,13 +20,18 @@ enum ChatRoomStatus {
 enum MessageType {
   text,
   file, //纯文件
-  image,//纯图片
-  audio,//音频
-  video,//视频
+  image, //纯图片
+  audio, //音频
+  video, //视频
   quill, // 富文本（富内容）
-  emoji,//表情
+  emoji, //表情
   system, // 系统通知
   aiReply, // AI回复（特化处理）
+  videoCall, // 视频通话请求
+  videoAnswer, // 视频通话接听
+  videoReject, // 视频通话拒绝
+  videoHangup, // 视频挂断
+  signal, // SDP、ICE等信令
 }
 
 enum MessageStatus {
@@ -50,7 +55,7 @@ extension MessageStatusExtension on MessageStatus {
         return "已读";
       case MessageStatus.failed:
         return "发送失败";
-      }
+    }
   }
 }
 

@@ -50,7 +50,7 @@ class LastMessagePreview extends StatelessWidget {
         break;
       case MessageType.file:
         contentText = "$senderNickname[ 文件$attachmentCountStr ]";
-        icon =  HugeIcons.strokeRoundedFileAttachment; // 文件图标
+        icon = HugeIcons.strokeRoundedFileAttachment; // 文件图标
         break;
       case MessageType.image:
         contentText = "$senderNickname[ 图片$attachmentCountStr ]";
@@ -76,6 +76,21 @@ class LastMessagePreview extends StatelessWidget {
         contentText = "[ AI ] ${lastMessage!.content}"; // AI 回复
         icon = HugeIcons.strokeRoundedBot; // AI 图标
         break;
+      case MessageType.videoCall:
+        contentText = "$senderNickname[ 通话请求 ]"; // 通话请求
+        icon = HugeIcons.strokeRoundedCall02;
+      case MessageType.videoAnswer:
+        contentText = "$senderNickname[ 通话中 ]"; // 通话中
+        icon = HugeIcons.strokeRoundedCall02;
+      case MessageType.videoReject:
+        contentText = "$senderNickname[ 通话拒绝 ]"; // 通话拒绝
+        icon = HugeIcons.strokeRoundedCall02;
+      case MessageType.videoHangup:
+        contentText = "$senderNickname[ 通话结束 ]"; // 通话结束
+        icon = HugeIcons.strokeRoundedCall02;
+      case MessageType.signal:
+        contentText = "$senderNickname[ 连接中 ]"; // 连接中
+        icon = HugeIcons.strokeRoundedCall02;
     }
 
     return Row(
@@ -83,7 +98,7 @@ class LastMessagePreview extends StatelessWidget {
       children: [
         // 如果有图标，则显示
         HugeIcon(
-          icon:icon,
+          icon: icon,
           size: 14, // 图标大小与文字匹配
           color: textColor.withValues(alpha: 0.7), // 图标颜色稍微浅一点
         ),

@@ -65,6 +65,7 @@ dependencies:
   #socket
   web_socket_channel: ^3.0.3
   mime: ^2.0.0
+  flutter_webrtc: ^0.14.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

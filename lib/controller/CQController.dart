@@ -306,7 +306,7 @@ class CQController extends ChangeNotifier {
     final chatMsg = ChatMessage(
       messageId: DateTime.now().millisecondsSinceEpoch.toString(),
       senderId: value.authController.currentUser!.id,
-      receiverId: _determineReceiverId(value),
+      receiverId: value.determineReceiverId(value.authController.currentUser!.id),
       content: content,
       status: MessageStatus.sent,
       type: messageType,
@@ -327,22 +327,7 @@ class CQController extends ChangeNotifier {
     return chatMsg;
   }
 
-  /// 根据房间类型确定接收者 ID
-  /// 私聊：取第一个非当前用户的成员 ID
-  /// 群聊：房间 ID 解析为整数
-  String _determineReceiverId(ChatController controller) {
-    final room = controller.chatRoom;
-    if (room.roomType == ChatRoomType.group) {
-      return room.roomId;
-    }
-    // 私聊场景：安全取除自己外的成员
-    // 找到“不等于当前 uid” 的那个成员
-    final otherId = room.memberIds.firstWhere(
-      (memberId) => memberId != controller.authController.currentUser!.id,
-      orElse: () => '',
-    );
-    return otherId;
-  }
+
 
   ///
   /// 判断是否是纯emoji
