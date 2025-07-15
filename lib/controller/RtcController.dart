@@ -23,6 +23,7 @@ class RtcCallController extends ChangeNotifier {
   MediaStream? _localStream; // 本地音视频流
   MediaStreamTrack? _screenTrack; // 屏幕共享轨道（预留）
   Timer? _screenCaptureTimer; // 屏幕共享定时截图任务
+  List<RTCIceCandidate> _cachedCandidates = []; // 新增：用于缓存ICE候选
 
   // ICE 服务器配置，用于穿透 NAT
   final Map<String, dynamic> _iceServers = {
@@ -102,6 +103,15 @@ class RtcCallController extends ChangeNotifier {
     // _peerConnection = await createPeerConnection({});
     SimpleFileLogger.log('[RtcCallController] PeerConnection 已创建。');
 
+    if (_cachedCandidates.isNotEmpty) {
+      _debugLog('🔄 处理缓存的 ICE 候选： ${_cachedCandidates.length} 个');
+      for (var candidate in _cachedCandidates) {
+        await _peerConnection!.addCandidate(candidate);
+        _debugLog('✅ 添加缓存候选: ${candidate.candidate}');
+      }
+      _cachedCandidates.clear(); // 清空缓存
+    }
+    
     // 添加本地音视频轨道
     _localStream?.getTracks().forEach((track) {
       track.enabled = true;
@@ -235,17 +245,18 @@ class RtcCallController extends ChangeNotifier {
   /// 处理接收到的 ICE 候选信息
   Future<void> handleCandidate(Map<String, dynamic> data) async {
     _debugLog('📥 handleCandidate - 接收 ICE 候选');
-    if (_peerConnection == null) {
-      _debugLog('❌ handleCandidate - PeerConnection为空');
-      return;
-    }
+
     final candidate = RTCIceCandidate(
       data['candidate'],
       data['sdpMid'],
       data['sdpMlineIndex'],
     );
+    if (_peerConnection == null) {
+      _cachedCandidates.add(candidate);
+      _debugLog('❌ handleCandidate - PeerConnection为空，缓存候选。');
+      return;
+    }
     await _peerConnection?.addCandidate(candidate);
-
     _debugLog('✅ handleCandidate - 添加候选成功');
   }
 

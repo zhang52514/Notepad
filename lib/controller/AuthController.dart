@@ -13,7 +13,8 @@ import 'mixin/UserMixin.dart';
 
 class AuthController extends ChangeNotifier
     with UserMixin, RoomMixin, MessageMixin {
-  final String _url = 'ws://127.0.0.1:8081/chat';
+  // final String _url = 'ws://127.0.0.1:8081/chat';
+  final String _url = 'ws://aly.anoxia.cn:8081/chat';
   final WebSocketService _ws = WebSocketService();
   String webSocketStatus = "初始化中";
   WebSocketConnectionStatus webSocketResult =
@@ -35,7 +36,7 @@ class AuthController extends ChangeNotifier
         case WebSocketConnectionStatus.connected:
           webSocketStatus = "服务器已连接";
           if (currentUser == null) {
-            init();
+            // init();
           }
           break;
         case WebSocketConnectionStatus.error:
