@@ -1,131 +1,229 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:notepad/core/SimpleFileLogger.dart';
+import 'package:notepad/core/SimpleFileLogger.dart'; // 确保路径正确
 
+// 定义信令发送函数类型
 typedef SignalSender = Function(Map<String, dynamic> signal);
 
-/// WebRTC 模型控制器，用于处理视频通话、媒体流初始化、ICE候选、屏幕共享等逻辑。
-/// 配合 Provider 使用，自动通知 UI 更新状态。
 class RtcCallController extends ChangeNotifier {
-  void _debugLog(String label, [String? value]) {
+  // --- 日志工具 ---
+  void _log(String label, [String? details]) {
     final timestamp = DateTime.now().toIso8601String();
-    SimpleFileLogger.log('[WebRTC][$timestamp] $label ${value ?? ''}');
+    SimpleFileLogger.log('[WebRTC][$timestamp] $label ${details ?? ''}');
   }
 
-  bool _inCalling = false;
+  // --- 状态标志 ---
+  bool _inCalling = false; // 是否在通话中
   bool get inCalling => _inCalling;
 
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer(); // 本地视频渲染器
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer(); // 远程视频渲染器
-  RTCPeerConnection? _peerConnection; // WebRTC peer 对象
-  MediaStream? _localStream; // 本地音视频流
-  MediaStreamTrack? _screenTrack; // 屏幕共享轨道（预留）
-  Timer? _screenCaptureTimer; // 屏幕共享定时截图任务
-  List<RTCIceCandidate> _cachedCandidates = []; // 新增：用于缓存ICE候选
+  bool _isScreenSharing = false; // 是否正在屏幕共享
+  bool get isScreenSharing => _isScreenSharing;
 
-  // ICE 服务器配置，用于穿透 NAT
+  bool _isMicMuted = false; // 麦克风是否静音
+  bool get isMicMuted => _isMicMuted;
+
+  bool _isCameraOff = false; // 摄像头是否关闭
+  bool get isCameraOff => _isCameraOff;
+
+  // --- WebRTC 核心对象 ---
+  RTCPeerConnection? _peerConnection;
+  MediaStream? _localCameraStream; // 用于摄像头/麦克风的本地流
+  MediaStream? _screenShareStream; // 用于屏幕共享的流
+
+  // --- 媒体渲染器 ---
+  late final RTCVideoRenderer _localRenderer;
+  late final RTCVideoRenderer _remoteRenderer;
+
+  // --- ICE 候选缓存 (用于PeerConnection创建前的候选缓存) ---
+  final List<RTCIceCandidate> _cachedCandidates = [];
+
+  // --- 可用媒体设备列表 (主要用于桌面端) ---
+  List<MediaDeviceInfo> _videoDevices = []; // 存储可用视频设备列表
+  String? _currentCameraDeviceId; // 当前使用的摄像头ID
+
+  // --- ICE 服务器配置 ---
   final Map<String, dynamic> _iceServers = {
     'iceServers': [
-      {'urls': 'stun:stun.l.google.com:19302'}, // Google 的公共 STUN 服务器
-      // 如果需要 TURN 服务器，可以在这里添加
+      {
+        'urls': [
+          'turn:107.173.152.226:4000?transport=udp',
+          'turn:107.173.152.226:4000?transport=tcp',
+          'turns:anoxia.cn:5349?transport=tcp',
+        ],
+        'username': 'admin',
+        'credential': '123456',
+      },
+      {'urls': 'stun:stun.l.google.com:19302'},
+      {'urls': 'stun:stun1.l.google.com:19302'},
     ],
   };
 
-  // 外部只读访问渲染器，用于 RTCVideoView 显示
+  // --- 渲染器访问 Getter ---
   RTCVideoRenderer get localRenderer => _localRenderer;
   RTCVideoRenderer get remoteRenderer => _remoteRenderer;
 
-  // 当前连接是否建立成功
+  // --- 连接状态 Getter (更精确地判断是否已连接) ---
   bool get isConnected =>
-      _peerConnection?.connectionState ==
-      RTCPeerConnectionState.RTCPeerConnectionStateConnected;
+      _peerConnection?.connectionState == RTCPeerConnectionState.RTCPeerConnectionStateConnected;
 
-  // 是否接收到远程流
-  bool get hasRemoteStream => _remoteRenderer.srcObject != null;
-
-  /// 构造函数：初始化视频渲染器，并传入 WebSocketService 和信令发送回调
+  // --- 构造函数 ---
   RtcCallController() {
-    _initializeRenderers();
+    _localRenderer = RTCVideoRenderer();
+    _remoteRenderer = RTCVideoRenderer();
+    _initializeRenderers(); // 异步初始化渲染器
   }
 
-  /// 初始化 RTCVideoView 渲染器（UI组件依赖）
+  /// 初始化媒体渲染器
   Future<void> _initializeRenderers() async {
-    await _localRenderer.initialize();
-    await _remoteRenderer.initialize();
+    await Future.wait([
+      _localRenderer.initialize(),
+      _remoteRenderer.initialize(),
+    ]);
+    _log("渲染器初始化完成");
   }
 
-  /// 销毁控制器（释放资源）
   @override
   void dispose() {
-    _cleanUp();
+    _log("控制器销毁中...");
+    _cleanUpResources(); // 清理所有 WebRTC 相关资源
     super.dispose();
   }
 
-  /// 初始化通话流程
-  /// - 获取本地音视频流
-  /// - 建立 PeerConnection
-  /// - （主叫方）创建 Offer
+  // --- 通话初始化 ---
+  /// 初始化通话并根据 `isOffer` 决定是发起方还是接收方。
+  /// `onSignalSend` 用于发送信令到对方。
   Future<void> initCall({
-    bool isOffer = false,
+    required bool isOffer,
     required SignalSender onSignalSend,
   }) async {
-    SimpleFileLogger.log('[RtcCallController] 初始化呼叫。isOffer: $isOffer');
-    await _getUserMedia();
-    await _createPeerConnection(onSignalSend);
-    if (isOffer) {
-      await createOffer(onSignalSend);
-    }
-    _inCalling = true;
-    notifyListeners();
-  }
-
-  /// 获取本地音视频流并绑定到本地渲染器
-  Future<void> _getUserMedia() async {
-    final constraints = {
-      'audio': true,
-      'video': {'facingMode': 'user'}, // 使用前置摄像头
-    };
-    _localStream = await navigator.mediaDevices.getUserMedia(constraints);
-    _localRenderer.srcObject = _localStream;
-    notifyListeners(); // 通知 UI 刷新本地视频
-  }
-
-  /// 创建 WebRTC peer connection，并绑定事件处理器
-  Future<void> _createPeerConnection(SignalSender onSignalSend) async {
-    if (_peerConnection != null) {
-      SimpleFileLogger.log('[RtcCallController] PeerConnection 已存在，跳过创建。');
+    if (_inCalling) {
+      _log("已在通话中，跳过初始化");
       return;
     }
 
-    _peerConnection = await createPeerConnection(_iceServers);
-    // _peerConnection = await createPeerConnection({});
-    SimpleFileLogger.log('[RtcCallController] PeerConnection 已创建。');
+    try {
+      await _getUserMedia(); // 获取本地摄像头/麦克风流
+      await _createPeerConnection(onSignalSend); // 创建 PeerConnection 并设置事件监听
 
-    if (_cachedCandidates.isNotEmpty) {
-      _debugLog('🔄 处理缓存的 ICE 候选： ${_cachedCandidates.length} 个');
-      for (var candidate in _cachedCandidates) {
-        await _peerConnection!.addCandidate(candidate);
-        _debugLog('✅ 添加缓存候选: ${candidate.candidate}');
+      // 将本地摄像头流添加到 PeerConnection
+      _localCameraStream?.getTracks().forEach((track) {
+        _peerConnection!.addTrack(track, _localCameraStream!);
+        _log("添加本地摄像头/麦克风轨道", "类型: ${track.kind}, ID: ${track.id}");
+      });
+
+      if (isOffer) {
+        await createOffer(onSignalSend); // 如果是主叫，创建 Offer
       }
-      _cachedCandidates.clear(); // 清空缓存
-    }
-    
-    // 添加本地音视频轨道
-    _localStream?.getTracks().forEach((track) {
-      track.enabled = true;
-      _peerConnection!.addTrack(track, _localStream!);
-      _debugLog(
-        '🎬 添加本地轨道',
-        'kind=${track.kind}, id=${track.id}, enabled=${track.enabled}',
-      );
-    });
 
-    // 监听 ICE 候选（需要通过信令发送给远端）
-    _peerConnection!.onIceCandidate = (candidate) {
-      SimpleFileLogger.log('[WebRTC] ICE 候选: ${candidate.toMap()}');
-      // 通过信令发送 ICE Candidate
+      _inCalling = true; // 设置通话状态为进行中
+      notifyListeners(); // 通知 UI 更新
+      _log("通话初始化完成", "角色: ${isOffer ? '主叫' : '被叫'}");
+    } on PlatformException catch (e) {
+      _log("❌ 通话初始化平台异常", "代码: ${e.code}, 消息: ${e.message}");
+      _cleanUpResources();
+      throw "无法访问媒体设备: ${e.message}"; // 向上抛出更友好的错误信息
+    } catch (e) {
+      _log("❌ 通话初始化失败", e.toString());
+      _cleanUpResources();
+      rethrow; // 重新抛出其他错误
+    }
+  }
+
+  // --- 获取本地媒体流 (摄像头/麦克风) ---
+  /// 获取本地摄像头和麦克风的媒体流。
+  Future<void> _getUserMedia({String? deviceId}) async {
+    // 如果已经有流且不需要切换设备，则直接返回
+    if (_localCameraStream != null && (deviceId == null || _currentCameraDeviceId == deviceId)) {
+      return;
+    }
+
+    // 停止并清理旧的本地流（如果有）
+    _localCameraStream?.getTracks().forEach((track) => track.stop());
+    _localCameraStream?.dispose();
+    _localCameraStream = null;
+    _localRenderer.srcObject = null; // 清空渲染器源
+
+    try {
+      // 1. 枚举所有可用的视频输入设备 (仅在桌面端有意义)
+      _videoDevices = await navigator.mediaDevices.enumerateDevices().then(
+            (devices) => devices.where((d) => d.kind == 'videoinput').toList(),
+          );
+
+      // 2. 选择要使用的摄像头设备ID
+      final selectedDeviceId = deviceId ?? _videoDevices.firstWhereOrNull(
+        (device) => device.deviceId != null, // 找到第一个有DeviceId的设备
+        orElse: () => MediaDeviceInfo(label: '',deviceId: ''), // 如果没有找到则返回一个空的，避免报错
+      )?.deviceId;
+
+      if (selectedDeviceId == null || selectedDeviceId.isEmpty) {
+        _log("警告", "没有可用的视频输入设备。");
+        // 如果没有视频设备，可以尝试只获取音频
+        final audioConstraints = {'audio': true, 'video': false};
+        _localCameraStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+      } else {
+        final constraints = {
+          'audio': true,
+          'video': {'deviceId': selectedDeviceId}, // 使用选定的设备ID
+        };
+        _localCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        _currentCameraDeviceId = selectedDeviceId; // 更新当前设备ID
+      }
+
+      _localRenderer.srcObject = _localCameraStream; // 将本地流设置到渲染器
+      notifyListeners(); // 通知 UI 更新
+
+      _log("✅ 本地媒体流获取成功",
+          "音频轨道: ${_localCameraStream!.getAudioTracks().length}, "
+          "视频轨道: ${_localCameraStream!.getVideoTracks().length}, "
+          "设备ID: $_currentCameraDeviceId");
+    } on PlatformException catch (e) {
+      _log("❌ 媒体获取平台异常", "代码: ${e.code}, 消息: ${e.message}");
+      throw "无法访问摄像头/麦克风: ${e.message}";
+    } catch (e) {
+      _log("❌ 媒体获取未知错误", e.toString());
+      throw "媒体获取失败: $e";
+    }
+  }
+
+  // --- 创建 PeerConnection ---
+  /// 创建 RTCPeerConnection 并设置所有必要的事件监听。
+  Future<void> _createPeerConnection(SignalSender onSignalSend) async {
+    if (_peerConnection != null) {
+      _log("PeerConnection 已存在，跳过创建");
+      return;
+    }
+
+    try {
+      _peerConnection = await createPeerConnection(_iceServers);
+      _log("PeerConnection 创建成功");
+
+      // 配置 PeerConnection 事件监听器
+      _configurePeerConnectionEvents(onSignalSend);
+
+      // 处理缓存的 ICE 候选 (在 PeerConnection 创建前收到的)
+      if (_cachedCandidates.isNotEmpty) {
+        _log("处理缓存的 ICE 候选", "数量: ${_cachedCandidates.length}");
+        for (final candidate in _cachedCandidates) {
+          await _peerConnection!.addCandidate(candidate);
+        }
+        _cachedCandidates.clear();
+      }
+    } catch (e) {
+      _log("❌ 创建PeerConnection失败", e.toString());
+      _cleanUpResources();
+      rethrow;
+    }
+  }
+
+  // --- 配置 PeerConnection 事件 ---
+  /// 设置 RTCPeerConnection 的各种事件回调。
+  void _configurePeerConnectionEvents(SignalSender onSignalSend) {
+    _peerConnection!.onIceCandidate = (RTCIceCandidate? candidate) {
+      if (candidate == null) return;
+
+      _log("生成 ICE 候选", candidate.candidate ?? '');
       onSignalSend({
         'type': 'candidate',
         'sdpMid': candidate.sdpMid,
@@ -134,139 +232,146 @@ class RtcCallController extends ChangeNotifier {
       });
     };
 
-    // // 接收到远程媒体流时绑定到远程渲染器
-    // _peerConnection!.onAddStream = (stream) {
-    //   SimpleFileLogger.log(
-    //     '----- DEBUG: onAddStream callback triggered! Stream ID: ${stream.id}',
-    //   ); // 新增的调试日志
-    //   SimpleFileLogger.log('[WebRTC] 远程流已接收： ${stream.id}');
-    //   _remoteRenderer.srcObject = stream;
-    //   notifyListeners(); // 通知 UI 展示远端视频
-    // };
-
     _peerConnection!.onTrack = (RTCTrackEvent event) {
+      _log("收到远程轨道", "类型: ${event.track.kind}, ID: ${event.track.id}");
       if (event.track.kind == 'video') {
-        _debugLog(
-          '📺 onTrack - 收到远程视频轨道',
-          'trackId=${event.track.id}, streamId=${event.streams.first.id}',
-        );
-        _remoteRenderer.srcObject = event.streams.first;
+        _remoteRenderer.srcObject = event.streams.first; // 远程视频流
         notifyListeners();
-      } else {
-        _debugLog('📡 onTrack - 收到非视频轨道', 'kind=${event.track.kind}');
       }
     };
 
-    // 监听连接状态变更
     _peerConnection!.onConnectionState = (state) {
-      SimpleFileLogger.log('[WebRTC] 连接状态： $state');
-      if ([
-        RTCPeerConnectionState.RTCPeerConnectionStateDisconnected,
-        RTCPeerConnectionState.RTCPeerConnectionStateFailed,
-        RTCPeerConnectionState.RTCPeerConnectionStateClosed,
-      ].contains(state)) {
-        SimpleFileLogger.log('[WebRTC] PeerConnection 已断开、失败或关闭。挂断.');
-        hangUp(); // 连接断开、失败或关闭时自动挂断
+      _log("PeerConnection 连接状态变更", state.toString());
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+        _log("✅ PeerConnection 已连接", "通话成功建立！");
+      } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+        _log("连接终止", "状态: $state, 自动挂断");
+        hangUp();
       }
-      notifyListeners(); // 刷新连接状态 UI
+      notifyListeners(); // 通知 UI 更新连接状态
     };
 
     _peerConnection!.onIceConnectionState = (state) {
-      SimpleFileLogger.log('[WebRTC] ICE连接状态：$state');
-      notifyListeners();
+      _log("ICE 连接状态", state.toString());
     };
   }
 
-  /// 创建 Offer（主叫方使用）并设置本地 SDP
+  // --- 信令相关方法 ---
+  /// 创建并发送 Offer (主叫方)
   Future<void> createOffer(SignalSender onSignalSend) async {
     if (_peerConnection == null) {
-      _debugLog('❌ createOffer - PeerConnection为空');
+      _log("错误", "PeerConnection 未初始化，无法创建 Offer");
       return;
     }
+    try {
+      final offer = await _peerConnection!.createOffer();
+      await _peerConnection!.setLocalDescription(offer);
 
-    _debugLog('🎥 createOffer - 开始创建 Offer');
-
-    final offer = await _peerConnection!.createOffer();
-    await _peerConnection!.setLocalDescription(offer);
-
-    _debugLog('✅ createOffer - SDP 设置成功，类型: ${offer.type}');
-    _debugLog('🔼 createOffer - 发送 Offer 信令');
-    // 通过信令发送 Offer
-    onSignalSend(offer.toMap());
+      _log("Offer 创建成功", "类型: ${offer.type}");
+      await onSignalSend(offer.toMap());
+    } catch (e) {
+      _log("❌ 创建Offer失败", e.toString());
+      rethrow;
+    }
   }
 
-  /// 处理对方发来的 Offer（被叫方）
+  /// 处理收到的 Offer 并创建 Answer (被叫方)
   Future<void> handleOffer(
     Map<String, dynamic> data,
     SignalSender onSignalSend,
   ) async {
-    SimpleFileLogger.log('[WebRTC] 处理传入的 offer： ${data['type']}');
-    if (_peerConnection == null) {
-      await _createPeerConnection(
-        onSignalSend,
-      ); // 如果是第一次收到 Offer，需要先创建 PeerConnection
+    try {
+      _log("处理Offer", "SDP: ${data['sdp']?.toString().substring(0, 30)}...");
+
+      // 确保本地媒体流和PeerConnection已初始化
+      if (_localCameraStream == null) await _getUserMedia();
+      if (_peerConnection == null) await _createPeerConnection(onSignalSend);
+
+      await _peerConnection!.setRemoteDescription(
+        RTCSessionDescription(data['sdp'], data['type']),
+      );
+
+      await _createAnswer(onSignalSend);
+    } catch (e) {
+      _log("❌ 处理Offer失败", e.toString());
+      hangUp();
+      rethrow;
     }
-    await _peerConnection!.setRemoteDescription(
-      RTCSessionDescription(data['sdp'], data['type']),
-    );
-    SimpleFileLogger.log('[WebRTC] 设置远程描述（offer）.');
-    await _createAnswer(onSignalSend); // 收到 Offer 后创建并发送 Answer
   }
 
-  /// 创建 Answer 响应 Offer，并设置本地 SDP
+  /// 创建并发送 Answer (被叫方)
   Future<void> _createAnswer(SignalSender onSignalSend) async {
     if (_peerConnection == null) {
-      _debugLog('❌ createAnswer - PeerConnection为空');
+      _log("错误", "PeerConnection 未初始化，无法创建 Answer");
       return;
     }
-    _debugLog('🎥 createAnswer - 开始创建 Answer');
-    final answer = await _peerConnection!.createAnswer();
-    await _peerConnection!.setLocalDescription(answer);
+    try {
+      final answer = await _peerConnection!.createAnswer();
+      await _peerConnection!.setLocalDescription(answer);
 
-    _debugLog('✅ createAnswer - SDP 设置成功，类型: ${answer.type}');
-    _debugLog('🔼 createAnswer - 发送 Answer 信令');
-    // 通过信令发送 Answer
-    onSignalSend(answer.toMap());
+      _log("Answer 创建成功", "类型: ${answer.type}");
+      await onSignalSend(answer.toMap());
+    } catch (e) {
+      _log("❌ 创建Answer失败", e.toString());
+      rethrow;
+    }
   }
 
-  /// 处理对方返回的 Answer
+  /// 处理收到的 Answer (主叫方)
   Future<void> handleAnswer(Map<String, dynamic> data) async {
-    _debugLog('📥 handleAnswer - 接收 Answer');
     if (_peerConnection == null) {
-      _debugLog('❌ handleAnswer - PeerConnection为空');
+      _log("错误", "PeerConnection 未初始化，无法处理 Answer");
       return;
     }
-    await _peerConnection?.setRemoteDescription(
-      RTCSessionDescription(data['sdp'], data['type']),
-    );
-    _debugLog('✅ handleAnswer - 设置远程 SDP 成功');
+    try {
+      _log("处理Answer", "SDP: ${data['sdp']?.toString().substring(0, 30)}...");
+
+      await _peerConnection?.setRemoteDescription(
+        RTCSessionDescription(data['sdp'], data['type']),
+      );
+    } catch (e) {
+      _log("❌ 处理Answer失败", e.toString());
+      hangUp();
+      rethrow;
+    }
   }
 
-  /// 处理接收到的 ICE 候选信息
+  /// 处理收到的 ICE Candidate
   Future<void> handleCandidate(Map<String, dynamic> data) async {
-    _debugLog('📥 handleCandidate - 接收 ICE 候选');
+    try {
+      final candidate = RTCIceCandidate(
+        data['candidate'],
+        data['sdpMid'],
+        data['sdpMlineIndex'],
+      );
 
-    final candidate = RTCIceCandidate(
-      data['candidate'],
-      data['sdpMid'],
-      data['sdpMlineIndex'],
-    );
-    if (_peerConnection == null) {
-      _cachedCandidates.add(candidate);
-      _debugLog('❌ handleCandidate - PeerConnection为空，缓存候选。');
-      return;
+      if (_peerConnection == null) {
+        _log("缓存ICE候选", "等待PeerConnection初始化");
+        _cachedCandidates.add(candidate);
+        return;
+      }
+
+      await _peerConnection!.addCandidate(candidate);
+      _log("添加ICE候选成功", candidate.candidate ?? '');
+    } catch (e) {
+      _log("❌ 添加ICE候选失败", e.toString());
     }
-    await _peerConnection?.addCandidate(candidate);
-    _debugLog('✅ handleCandidate - 添加候选成功');
   }
 
-  /// 统一处理接收到的 WebRTC 信令
+  /// 统一处理所有信令
   void handleSignal(
     Map<String, dynamic> signalData,
     SignalSender onSignalSend,
   ) {
-    SimpleFileLogger.log('[RtcCallController] 接收信号: ${signalData['type']}');
-    if (!signalData.containsKey('type')) return;
+    if (!signalData.containsKey('type')) {
+      _log("警告", "接收到无效信令，缺少 'type' 字段: $signalData");
+      return;
+    }
+
+    _log("处理信令", "类型: ${signalData['type']}");
+
     switch (signalData['type']) {
       case 'offer':
         handleOffer(signalData, onSignalSend);
@@ -277,189 +382,275 @@ class RtcCallController extends ChangeNotifier {
       case 'candidate':
         handleCandidate(signalData);
         break;
+      case 'hangup': // 新增：处理对方发来的挂断信令
+        _log("收到挂断信令", "对方已挂断");
+        hangUp();
+        break;
       default:
-        SimpleFileLogger.log(
-          '[RtcCallController] 未知信号类型: ${signalData['type']}',
-        );
+        _log("未知信令类型", signalData['type'].toString());
     }
   }
 
-  /// 挂断通话：关闭 Peer、清理资源
+  // --- 通话控制方法 ---
+  /// 挂断当前通话并清理所有资源。
   void hangUp() {
-    SimpleFileLogger.log('[WebRTC] 已发起挂断.');
-    _cleanUp();
-    _inCalling = false;
-    notifyListeners();
+    _log("执行挂断通话流程");
+    _cleanUpResources();
+    _inCalling = false; // 重置通话状态
+    _isScreenSharing = false; // 重置屏幕共享状态
+    _isMicMuted = false; // 重置麦克风状态
+    _isCameraOff = false; // 重置摄像头状态
+    _currentCameraDeviceId = null; // 重置当前设备ID
+    _cachedCandidates.clear(); // 清除缓存候选
+    notifyListeners(); // 通知 UI 更新
+    _log("挂断完成");
   }
 
-  /// 清理 WebRTC 和 UI 状态
-  void _cleanUp() {
-    _screenCaptureTimer?.cancel();
-    _screenCaptureTimer = null;
-    _screenTrack?.stop();
-    _screenTrack = null;
+  /// 清理所有 WebRTC 相关资源。
+  void _cleanUpResources() {
+    _log("清理所有 WebRTC 资源...");
 
+    // 停止并清理屏幕共享流
+    _screenShareStream?.getTracks().forEach((track) => track.stop());
+    _screenShareStream?.dispose();
+    _screenShareStream = null;
+    // 停止并清理本地摄像头/麦克风流
+    _localCameraStream?.getTracks().forEach((track) => track.stop());
+    _localCameraStream?.dispose();
+    _localCameraStream = null;
+
+    // 关闭 PeerConnection
     _peerConnection?.close();
     _peerConnection = null;
 
-    _localStream?.getTracks().forEach((track) {
-      track.stop(); // 停止所有本地媒体轨道
-    });
-    _localStream?.dispose();
-    _localStream = null;
-
+    // 重置渲染器源
     _localRenderer.srcObject = null;
     _remoteRenderer.srcObject = null;
 
-    // 重新初始化渲染器，确保下次通话时状态正确
-    _initializeRenderers();
-    SimpleFileLogger.log('[WebRTC] 资源已清理.');
+    _log("资源清理完成");
   }
 
-  /// 启动屏幕共享截图流程（通过平台通道截图）
-  /// [captureFrame] 是一个回调函数，用于从平台层获取屏幕截图的 Uint8List。
-  /// **注意：** 在 Windows 上实现屏幕截图并转换为视频流需要复杂的平台通道代码，
-  /// 这里仅提供骨架。你需要：
-  /// 1. 在 Flutter 端调用 Windows API (如 `GetDesktopWindow`, `GetWindowDC`, `BitBlt`) 进行截图。
-  /// 2. 将截图数据 (如 BMP) 转换为可用的视频帧格式。
-  /// 3. 将视频帧数据添加到 WebRTC 的 MediaStreamTrack 中。
-  void startScreenShare(Future<Uint8List?> Function() captureFrame) async {
-    if (_peerConnection == null) {
-      SimpleFileLogger.log('[ScreenShare]PeerConnection 未初始化.');
+  /// 切换麦克风的静音状态。
+  void toggleMic() {
+    final audioTrack = _localCameraStream?.getAudioTracks().firstOrNull;
+    if (audioTrack != null) {
+      audioTrack.enabled = !audioTrack.enabled;
+      _isMicMuted = !audioTrack.enabled;
+      _log("麦克风状态切换", "静音: $_isMicMuted");
+      notifyListeners();
+    } else {
+      _log("警告", "未找到本地音频轨道，无法切换麦克风状态。");
+    }
+  }
+
+  /// 切换摄像头的开启/关闭状态。
+  void toggleCamera() {
+    final videoTrack = _localCameraStream?.getVideoTracks().firstOrNull;
+    if (videoTrack != null) {
+      videoTrack.enabled = !videoTrack.enabled;
+      _isCameraOff = !videoTrack.enabled;
+      _log("摄像头状态切换", "关闭: $_isCameraOff");
+      notifyListeners();
+    } else {
+      _log("警告", "未找到本地视频轨道，无法切换摄像头状态。");
+    }
+  }
+
+  /// 切换前后摄像头或桌面端可用摄像头。
+  Future<void> switchCamera() async {
+    if (_localCameraStream == null) {
+      _log("错误", "本地流未初始化，无法切换摄像头。");
       return;
     }
 
-    // 尝试获取屏幕媒体流 (WebRTC API 方式，可能不适用于所有桌面平台)
-    // 更好的方式是使用平台通道获取截图并手动添加到 MediaStreamTrack
-    try {
-      final MediaStream screenStream = await navigator.mediaDevices
-          .getDisplayMedia({
-            'video': true,
-            'audio': false, // 通常屏幕共享不包含音频
-          });
-      _screenTrack = screenStream.getVideoTracks().first;
+    if (_videoDevices.isEmpty) {
+      _log("警告", "未检测到多个视频设备，无法切换摄像头。");
+      return;
+    }
 
-      // 替换或添加屏幕共享轨道到 PeerConnection
-      if (_localStream != null) {
-        // 移除旧的视频轨道（如果存在）
-        // 遍历所有的 RTCRtpSender
-        _peerConnection!.getSenders().then((senders) {
-          for (var sender in senders) {
-            // 检查这个 sender 是否正在发送一个视频轨道
-            // 并且这个视频轨道是否是我们本地流中的一个
-            if (sender.track?.kind == 'video' &&
-                _localStream!.getVideoTracks().contains(sender.track)) {
-              // 找到了对应的 RTCRtpSender，可以移除它了
-              _peerConnection!.removeTrack(sender);
-              // 停止发送的轨道，释放资源
-              sender.track?.stop(); // 注意这里是停止 sender.track
-              break; // 假设通常只有一个本地视频轨道需要替换
-            }
-          }
+    // 找到当前设备在列表中的索引
+    int currentIndex = _videoDevices.indexWhere((device) => device.deviceId == _currentCameraDeviceId);
+    // 计算下一个设备的索引
+    int nextIndex = (currentIndex + 1) % _videoDevices.length;
+    // 获取下一个设备的ID
+    String? nextDeviceId = _videoDevices[nextIndex].deviceId;
 
-          // 现在旧的视频轨道已经被移除了，可以添加新的屏幕共享轨道了
-          // 这是一个异步操作，所以确保在移除完成后再添加新轨道
-          _peerConnection!.addTrack(_screenTrack!, _localStream!);
-          _localRenderer.srcObject = _localStream; // 更新本地预览以显示屏幕共享
-          notifyListeners();
-          SimpleFileLogger.log('[ScreenShare] 通过 getDisplayMedia 开始屏幕共享并替换轨道.');
-        });
-        // 添加新的屏幕共享轨道
-        _peerConnection!.addTrack(_screenTrack!, _localStream!);
-      } else {
-        // 如果没有本地流，创建一个新的流来承载屏幕共享
-        _localStream = screenStream;
-        _peerConnection!.addStream(_localStream!);
-      }
-      _localRenderer.srcObject = _localStream; // 更新本地预览以显示屏幕共享
-      notifyListeners();
-      SimpleFileLogger.log('[ScreenShare] 通过 getDisplayMedia 开始屏幕共享。');
-    } catch (e) {
-      SimpleFileLogger.log('[ScreenShare]无法获取 DisplayMedia: $e。回退到手动捕获（未实现）.');
-      // 如果 getDisplayMedia 失败，可以尝试手动截图并编码
-      // _screenCaptureTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
-      //   final frame = await captureFrame();
-      //   if (frame != null) {
-      //     // TODO: 编码 frame 为视频轨推送到 WebRTC
-      //     // 这需要将 Uint8List 转换为视频帧，并创建一个 MediaStreamTrack
-      //     // 这是一个复杂的过程，通常需要额外的编解码库
-      //   }
-      // });
+    if (nextDeviceId != null && nextDeviceId.isNotEmpty) {
+      _log("切换摄像头", "从 $_currentCameraDeviceId 到 $nextDeviceId");
+      await _getUserMedia(deviceId: nextDeviceId); // 使用新的设备ID重新获取本地流
+      // 重新将流添加到 PeerConnection (这会触发协商)
+      await _replaceLocalStreamTracks();
+    } else {
+      _log("错误", "无法找到下一个有效的摄像头设备ID。");
     }
   }
 
-  /// 停止屏幕共享
-  void stopScreenShare() async {
-    SimpleFileLogger.log('[ScreenShare]停止屏幕共享.');
-    _screenCaptureTimer?.cancel();
-    _screenCaptureTimer = null;
-
-    if (_screenTrack != null) {
-      _screenTrack!.stop(); // 停止屏幕共享轨道
-
-      if (_peerConnection != null && _localStream != null) {
-        // 1. 找到并移除屏幕共享的 RTCRtpSender
-        await _peerConnection!.getSenders().then((senders) {
-          for (var sender in senders) {
-            // 检查这个 sender 是否正在发送我们的屏幕共享轨道
-            if (sender.track == _screenTrack) {
-              _peerConnection!.removeTrack(sender);
-              SimpleFileLogger.log('[ScreenShare] 删除了屏幕共享轨道发送器.');
-              break; // 找到并移除后即可退出循环
-            }
-          }
-        });
-
-        // 2. 重新添加摄像头视频轨道（如果之前有的话）
-        // 在这里添加逻辑以确保不会重复添加现有的摄像头轨道
-        // 最佳实践是先移除旧的摄像头 sender（如果存在），然后添加新的
-        // 这里简化处理，直接获取摄像头流并添加到 _localStream 和 peerConnection
-        try {
-          final newCameraStream = await navigator.mediaDevices.getUserMedia({
-            'audio': true,
-            'video': {
-              'facingMode': 'user',
-              'width': 640,
-              'height': 480,
-              'frameRate': 30,
-            },
-          });
-
-          // 先清理 _localStream 中旧的视频轨道（如果有的话），避免重复
-          _localStream!.getVideoTracks().forEach((track) {
-            track.stop(); // 停止旧的摄像头轨道
-            // 找到并移除旧的摄像头 sender
-            _peerConnection!.getSenders().then((senders) {
-              for (var sender in senders) {
-                if (sender.track == track) {
-                  _peerConnection!.removeTrack(sender);
-                  SimpleFileLogger.log('[ScreenShare]删除了旧的摄像机轨迹发送器.');
-                  break;
-                }
-              }
-            });
-          });
-          _localStream!.getAudioTracks().forEach((track) {
-            // 如果音频轨道也需要替换，在这里处理
-            // 否则保持不变，或只替换视频
-          });
-
-          // 更新 _localStream 为新的摄像头流
-          _localStream = newCameraStream;
-          // 将新摄像头流的所有轨道添加到 PeerConnection
-          _localStream!.getTracks().forEach((track) {
-            _peerConnection!.addTrack(track, _localStream!);
-            SimpleFileLogger.log('[ScreenShare] 添加了新的摄像机轨迹: ${track.kind}.');
-          });
-
-          _localRenderer.srcObject = _localStream; // 更新本地预览
-          SimpleFileLogger.log('[ScreenShare] 切换回相机流.');
-        } catch (e) {
-          SimpleFileLogger.log('[ScreenShare] 停止屏幕共享后无法获取摄像头流: $e');
-        }
-      }
-      _screenTrack = null; // 清空屏幕共享轨道引用
-      notifyListeners();
+  /// 替换 PeerConnection 中的本地流轨道 (用于摄像头切换或屏幕共享切换)
+  Future<void> _replaceLocalStreamTracks() async {
+    if (_peerConnection == null) {
+      _log("警告", "PeerConnection 未初始化，无法替换轨道。");
+      return;
     }
+
+    final senders = await _peerConnection!.getSenders();
+
+    // 替换音频轨道
+    final audioTrack = _localCameraStream?.getAudioTracks().firstOrNull;
+    final audioSender = senders.firstWhereOrNull((s) => s.track?.kind == 'audio');
+    if (audioTrack != null && audioSender != null) {
+      await audioSender.replaceTrack(audioTrack);
+      _log("替换音频轨道", "成功");
+    } else {
+      _log("警告", "未找到音频轨道或发送器，跳过音频轨道替换。");
+    }
+
+    // 替换视频轨道
+    final videoTrack = (_isScreenSharing ? _screenShareStream : _localCameraStream)
+        ?.getVideoTracks().firstOrNull;
+    final videoSender = senders.firstWhereOrNull((s) => s.track?.kind == 'video');
+    if (videoTrack != null && videoSender != null) {
+      await videoSender.replaceTrack(videoTrack);
+      _log("替换视频轨道", "成功");
+    } else {
+      _log("警告", "未找到视频轨道或发送器，跳过视频轨道替换。");
+    }
+
+    // 通常 replaceTrack 会触发 renegotiationNeeded 事件，但手动触发可能更稳健
+    // if (_peerConnection!.signalingState == RTCSignalingState.RTCSignalingStateStable) {
+    //   _log("触发 Offer 重新协商", "");
+    //   // TODO: 这里需要一个机制来判断当前是主叫还是被叫，并根据角色重新发起 Offer/Answer
+    //   // 这通常需要信令服务提供一个方法来触发协商
+    // }
+    notifyListeners();
+  }
+
+  // --- 屏幕共享功能 ---
+  /// 启动屏幕共享。
+  Future<void> startScreenShare() async {
+    if (_isScreenSharing) {
+      _log("警告", "已在屏幕共享中，跳过启动。");
+      return;
+    }
+    if (_peerConnection == null) {
+      _log("错误", "PeerConnection 未初始化，无法启动屏幕共享。");
+      return;
+    }
+
+    try {
+      _log("启动屏幕共享...");
+      // 获取屏幕共享流
+      _screenShareStream = await navigator.mediaDevices.getDisplayMedia({
+        'video': true,
+        'audio': false, // 通常屏幕共享不共享系统音频，可以根据需求调整
+      });
+
+      final screenTrack = _screenShareStream!.getVideoTracks().firstOrNull;
+      if (screenTrack == null) {
+        throw "无法获取屏幕共享视频轨道";
+      }
+
+      // 替换 PeerConnection 中的视频轨道为屏幕共享轨道
+      final senders = await _peerConnection!.getSenders();
+      final videoSender = senders.firstWhereOrNull(
+        (s) => s.track?.kind == 'video',
+      );
+
+      if (videoSender != null) {
+        await videoSender.replaceTrack(screenTrack);
+        _localRenderer.srcObject = _screenShareStream; // 更新本地渲染器显示屏幕共享内容
+        _isScreenSharing = true;
+        notifyListeners();
+        _log("✅ 屏幕共享已启动", "视频轨道ID: ${screenTrack.id}");
+
+        // 监听屏幕共享流的结束事件（如用户点击停止共享按钮）
+        screenTrack.onEnded = () {
+          _log("屏幕共享流已结束", "用户可能停止了共享");
+          stopScreenShare(); // 当用户从系统层面停止共享时，自动停止
+        };
+      } else {
+        throw "未找到视频发送器，无法进行屏幕共享";
+      }
+    } catch (e) {
+      _log("❌ 屏幕共享失败", e.toString());
+      _isScreenSharing = false; // 确保状态正确
+      // hangUp(); // 如果是关键错误，可以考虑挂断
+      rethrow;
+    }
+  }
+
+  /// 停止屏幕共享并恢复摄像头。
+  Future<void> stopScreenShare() async {
+    if (!_isScreenSharing) {
+      _log("警告", "未在屏幕共享中，跳过停止。");
+      return;
+    }
+    if (_peerConnection == null) {
+      _log("错误", "PeerConnection 未初始化，无法停止屏幕共享。");
+      // 此时只需清理屏幕共享流状态
+      _screenShareStream?.getTracks().forEach((track) => track.stop());
+      _screenShareStream?.dispose();
+      _screenShareStream = null;
+      _isScreenSharing = false;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      _log("停止屏幕共享...");
+
+      // 先停止并清理屏幕共享流
+      _screenShareStream?.getTracks().forEach((track) => track.stop());
+      _screenShareStream?.dispose();
+      _screenShareStream = null;
+
+      // 恢复摄像头视频流 (需要确保 _localCameraStream 仍然有效或重新获取)
+      if (_localCameraStream == null) {
+        await _getUserMedia(deviceId: _currentCameraDeviceId); // 重新获取摄像头流
+      }
+
+      final cameraTrack = _localCameraStream?.getVideoTracks().firstOrNull;
+      if (cameraTrack == null) {
+        throw "无法获取摄像头视频轨道以恢复";
+      }
+
+      // 替换回摄像头轨道
+      final senders = await _peerConnection!.getSenders();
+      final videoSender = senders.firstWhereOrNull(
+        (s) => s.track?.kind == 'video',
+      );
+
+      if (videoSender != null) {
+        await videoSender.replaceTrack(cameraTrack);
+        _localRenderer.srcObject = _localCameraStream; // 更新本地渲染器显示摄像头内容
+        _isScreenSharing = false;
+        notifyListeners();
+        _log("✅ 已恢复摄像头");
+      } else {
+        throw "未找到视频发送器，无法恢复摄像头";
+      }
+    } catch (e) {
+      _log("❌ 停止屏幕共享失败", e.toString());
+      _isScreenSharing = false; // 确保状态正确
+      // hangUp(); // 严重错误时终止通话
+      rethrow;
+    }
+  }
+}
+
+// 辅助扩展：用于安全地获取列表中的第一个元素或 null
+extension FirstWhereOrNull<E> on Iterable<E> {
+  E? get firstOrNull {
+    final it = iterator;
+    if (it.moveNext()) {
+      return it.current;
+    }
+    return null;
+  }
+
+  E? firstWhereOrNull(bool Function(E element) test, {E? Function()? orElse}) {
+    for (E element in this) {
+      if (test(element)) return element;
+    }
+    return orElse?.call();
   }
 }
