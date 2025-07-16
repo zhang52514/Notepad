@@ -69,6 +69,8 @@ class ChatController extends ChangeNotifier
       }
     });
   }
+  // 添加缓存未处理Offer的Map
+  final Map<String, Map<String, dynamic>> _pendingOffers = {};
 
   /// 处理所有 WebRTC 相关的信令消息
   void _handleRtcSignalingMessage(ChatMessage msg) {
@@ -94,6 +96,9 @@ class ChatController extends ChangeNotifier
         AnoToast.showToast("对方已接听", type: ToastType.info);
         // 如果当前通话页面已存在，不需要重复导航
         // 确保 rtcCallController 已经根据 isOffer:true 初始化
+        if (!rtcCallController.inCalling) {
+          // 重新初始化或处理异常
+        }
         break;
       case MessageType.videoReject:
         // 对方拒绝通话 (主叫方收到)
@@ -112,6 +117,13 @@ class ChatController extends ChangeNotifier
       case MessageType.signal:
         // WebRTC 信令 (SDP Offer/Answer, ICE Candidate)
         if (msg.metadata.isNotEmpty) {
+          if (msg.metadata['type'] == 'offer') {
+            // 如果是Offer且当前不在通话中，先缓存
+            if (!rtcCallController.inCalling) {
+              _pendingOffers[msg.senderId] = msg.metadata;
+              return;
+            }
+          }
           rtcCallController.handleSignal(msg.metadata, (signalData) {
             // 当 RtcCallController 内部生成新的信令时，通过此回调发送给对方
             _sendRtcSignalingMessage(
@@ -153,15 +165,26 @@ class ChatController extends ChangeNotifier
               await rtcCallController.initCall(
                 isOffer: false,
                 onSignalSend: (signalData) {
-                  // 当 RtcCallController 内部生成新的信令时，通过此回调发送给对方
                   _sendRtcSignalingMessage(
                     senderId: authController.currentUser!.id,
-                    receiverId: msg.senderId, // 回复给呼叫方
+                    receiverId: msg.senderId,
                     roomId: msg.roomId,
                     signalData: signalData,
                   );
                 },
               );
+              final pendingOffer = _pendingOffers[msg.senderId];
+              if (pendingOffer != null) {
+                rtcCallController.handleOffer(pendingOffer, (signalData) {
+                  _sendRtcSignalingMessage(
+                    senderId: authController.currentUser!.id,
+                    receiverId: msg.senderId,
+                    roomId: msg.roomId,
+                    signalData: signalData,
+                  );
+                });
+                _pendingOffers.remove(msg.senderId);
+              }
 
               // 导航到视频通话页面，并传入必要的参数
               main.navigatorKey.currentState?.push(

@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:notepad/core/SimpleFileLogger.dart'; // 确保路径正确
+import 'package:notepad/main.dart' as main;
+import 'package:notepad/views/chat/Components/ScreenSelectDialog.dart';
 
 // 定义信令发送函数类型
 typedef SignalSender = Function(Map<String, dynamic> signal);
@@ -12,6 +15,17 @@ class RtcCallController extends ChangeNotifier {
   void _log(String label, [String? details]) {
     final timestamp = DateTime.now().toIso8601String();
     SimpleFileLogger.log('[WebRTC][$timestamp] $label ${details ?? ''}');
+  }
+
+  Timer? _callTimeoutTimer;
+  RTCIceConnectionState? _iceState;
+  void _startCallTimeout() {
+    _callTimeoutTimer = Timer(const Duration(seconds: 30), () {
+      if (!isConnected) {
+        hangUp();
+        // 通知对方超时
+      }
+    });
   }
 
   // --- 状态标志 ---
@@ -48,15 +62,13 @@ class RtcCallController extends ChangeNotifier {
     'iceServers': [
       {
         'urls': [
-          'turn:107.173.152.226:4000?transport=udp',
-          'turn:107.173.152.226:4000?transport=tcp',
-          'turns:anoxia.cn:5349?transport=tcp',
+          'turn:anoxia.cn:3478?transport=udp',
+          'turn:anoxia.cn:3478?transport=tcp',
+          // 'turns:anoxia.cn:5349?transport=tcp',
         ],
         'username': 'admin',
         'credential': '123456',
       },
-      {'urls': 'stun:stun.l.google.com:19302'},
-      {'urls': 'stun:stun1.l.google.com:19302'},
     ],
   };
 
@@ -66,7 +78,8 @@ class RtcCallController extends ChangeNotifier {
 
   // --- 连接状态 Getter (更精确地判断是否已连接) ---
   bool get isConnected =>
-      _peerConnection?.connectionState == RTCPeerConnectionState.RTCPeerConnectionStateConnected;
+      _peerConnection?.connectionState ==
+      RTCPeerConnectionState.RTCPeerConnectionStateConnected;
 
   // --- 构造函数 ---
   RtcCallController() {
@@ -105,6 +118,13 @@ class RtcCallController extends ChangeNotifier {
 
     try {
       await _getUserMedia(); // 获取本地摄像头/麦克风流
+      _log(
+        "✅ 本地媒体流获取成功",
+        "音频轨道: ${_localCameraStream!.getAudioTracks().length}, "
+            "视频轨道: ${_localCameraStream!.getVideoTracks().length}, " // 检查这里是否 > 0
+            "设备ID: $_currentCameraDeviceId",
+      );
+
       await _createPeerConnection(onSignalSend); // 创建 PeerConnection 并设置事件监听
 
       // 将本地摄像头流添加到 PeerConnection
@@ -112,7 +132,7 @@ class RtcCallController extends ChangeNotifier {
         _peerConnection!.addTrack(track, _localCameraStream!);
         _log("添加本地摄像头/麦克风轨道", "类型: ${track.kind}, ID: ${track.id}");
       });
-
+      _startCallTimeout();
       if (isOffer) {
         await createOffer(onSignalSend); // 如果是主叫，创建 Offer
       }
@@ -135,7 +155,8 @@ class RtcCallController extends ChangeNotifier {
   /// 获取本地摄像头和麦克风的媒体流。
   Future<void> _getUserMedia({String? deviceId}) async {
     // 如果已经有流且不需要切换设备，则直接返回
-    if (_localCameraStream != null && (deviceId == null || _currentCameraDeviceId == deviceId)) {
+    if (_localCameraStream != null &&
+        (deviceId == null || _currentCameraDeviceId == deviceId)) {
       return;
     }
 
@@ -148,36 +169,50 @@ class RtcCallController extends ChangeNotifier {
     try {
       // 1. 枚举所有可用的视频输入设备 (仅在桌面端有意义)
       _videoDevices = await navigator.mediaDevices.enumerateDevices().then(
-            (devices) => devices.where((d) => d.kind == 'videoinput').toList(),
-          );
+        (devices) => devices.where((d) => d.kind == 'videoinput').toList(),
+      );
 
       // 2. 选择要使用的摄像头设备ID
-      final selectedDeviceId = deviceId ?? _videoDevices.firstWhereOrNull(
-        (device) => device.deviceId != null, // 找到第一个有DeviceId的设备
-        orElse: () => MediaDeviceInfo(label: '',deviceId: ''), // 如果没有找到则返回一个空的，避免报错
-      )?.deviceId;
+      final selectedDeviceId =
+          deviceId ??
+          _videoDevices
+              .firstWhereOrNull(
+                (device) => device.deviceId != null, // 找到第一个有DeviceId的设备
+                orElse:
+                    () => MediaDeviceInfo(
+                      label: '',
+                      deviceId: '',
+                    ), // 如果没有找到则返回一个空的，避免报错
+              )
+              ?.deviceId;
 
       if (selectedDeviceId == null || selectedDeviceId.isEmpty) {
         _log("警告", "没有可用的视频输入设备。");
         // 如果没有视频设备，可以尝试只获取音频
         final audioConstraints = {'audio': true, 'video': false};
-        _localCameraStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+        _localCameraStream = await navigator.mediaDevices.getUserMedia(
+          audioConstraints,
+        );
       } else {
         final constraints = {
           'audio': true,
           'video': {'deviceId': selectedDeviceId}, // 使用选定的设备ID
         };
-        _localCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        _localCameraStream = await navigator.mediaDevices.getUserMedia(
+          constraints,
+        );
         _currentCameraDeviceId = selectedDeviceId; // 更新当前设备ID
       }
 
       _localRenderer.srcObject = _localCameraStream; // 将本地流设置到渲染器
       notifyListeners(); // 通知 UI 更新
 
-      _log("✅ 本地媒体流获取成功",
-          "音频轨道: ${_localCameraStream!.getAudioTracks().length}, "
-          "视频轨道: ${_localCameraStream!.getVideoTracks().length}, "
-          "设备ID: $_currentCameraDeviceId");
+      _log(
+        "✅ 本地媒体流获取成功",
+        "音频轨道: ${_localCameraStream!.getAudioTracks().length}, "
+            "视频轨道: ${_localCameraStream!.getVideoTracks().length}, "
+            "设备ID: $_currentCameraDeviceId",
+      );
     } on PlatformException catch (e) {
       _log("❌ 媒体获取平台异常", "代码: ${e.code}, 消息: ${e.message}");
       throw "无法访问摄像头/麦克风: ${e.message}";
@@ -231,6 +266,9 @@ class RtcCallController extends ChangeNotifier {
         'candidate': candidate.candidate,
       });
     };
+    _peerConnection!.onIceGatheringState = (state) {
+      _log("ICE 聚集状态", state.toString());
+    };
 
     _peerConnection!.onTrack = (RTCTrackEvent event) {
       _log("收到远程轨道", "类型: ${event.track.kind}, ID: ${event.track.id}");
@@ -244,7 +282,9 @@ class RtcCallController extends ChangeNotifier {
       _log("PeerConnection 连接状态变更", state.toString());
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
         _log("✅ PeerConnection 已连接", "通话成功建立！");
-      } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+        _callTimeoutTimer?.cancel();
+      } else if (state ==
+              RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
         _log("连接终止", "状态: $state, 自动挂断");
@@ -255,6 +295,12 @@ class RtcCallController extends ChangeNotifier {
 
     _peerConnection!.onIceConnectionState = (state) {
       _log("ICE 连接状态", state.toString());
+      _iceState = state;
+      notifyListeners();
+    };
+    _peerConnection!.onSignalingState = (state) {
+      _log("onSignalingState 状态", state.toString());
+      notifyListeners();
     };
   }
 
@@ -312,6 +358,7 @@ class RtcCallController extends ChangeNotifier {
       await _peerConnection!.setLocalDescription(answer);
 
       _log("Answer 创建成功", "类型: ${answer.type}");
+      _log("Answer SDP", answer.sdp ?? "SDP is null");
       await onSignalSend(answer.toMap());
     } catch (e) {
       _log("❌ 创建Answer失败", e.toString());
@@ -469,7 +516,9 @@ class RtcCallController extends ChangeNotifier {
     }
 
     // 找到当前设备在列表中的索引
-    int currentIndex = _videoDevices.indexWhere((device) => device.deviceId == _currentCameraDeviceId);
+    int currentIndex = _videoDevices.indexWhere(
+      (device) => device.deviceId == _currentCameraDeviceId,
+    );
     // 计算下一个设备的索引
     int nextIndex = (currentIndex + 1) % _videoDevices.length;
     // 获取下一个设备的ID
@@ -496,7 +545,9 @@ class RtcCallController extends ChangeNotifier {
 
     // 替换音频轨道
     final audioTrack = _localCameraStream?.getAudioTracks().firstOrNull;
-    final audioSender = senders.firstWhereOrNull((s) => s.track?.kind == 'audio');
+    final audioSender = senders.firstWhereOrNull(
+      (s) => s.track?.kind == 'audio',
+    );
     if (audioTrack != null && audioSender != null) {
       await audioSender.replaceTrack(audioTrack);
       _log("替换音频轨道", "成功");
@@ -505,9 +556,13 @@ class RtcCallController extends ChangeNotifier {
     }
 
     // 替换视频轨道
-    final videoTrack = (_isScreenSharing ? _screenShareStream : _localCameraStream)
-        ?.getVideoTracks().firstOrNull;
-    final videoSender = senders.firstWhereOrNull((s) => s.track?.kind == 'video');
+    final videoTrack =
+        (_isScreenSharing ? _screenShareStream : _localCameraStream)
+            ?.getVideoTracks()
+            .firstOrNull;
+    final videoSender = senders.firstWhereOrNull(
+      (s) => s.track?.kind == 'video',
+    );
     if (videoTrack != null && videoSender != null) {
       await videoSender.replaceTrack(videoTrack);
       _log("替换视频轨道", "成功");
@@ -537,14 +592,34 @@ class RtcCallController extends ChangeNotifier {
     }
 
     try {
-      _log("启动屏幕共享...");
-      // 获取屏幕共享流
-      _screenShareStream = await navigator.mediaDevices.getDisplayMedia({
-        'video': true,
-        'audio': false, // 通常屏幕共享不共享系统音频，可以根据需求调整
-      });
+      final sources = await desktopCapturer.getSources(
+        types: [SourceType.Screen, SourceType.Window],
+      );
 
-      final screenTrack = _screenShareStream!.getVideoTracks().firstOrNull;
+      final source = await showDialog<DesktopCapturerSource>(
+        context: main.globalContext, // 确保 main.globalContext 可用且正确
+        builder: (_) => ScreenSelectDialog(sources),
+      );
+      if (source == null) {
+        _log("提示", "未选择任何共享源，取消屏幕共享。");
+        return;
+      }
+      _log("启动屏幕共享...", "选中源：${source.name}");
+
+      // 获取屏幕共享流
+      // 添加高级配置参数
+      final stream = await navigator.mediaDevices.getDisplayMedia(
+        <String, dynamic>{
+          'audio': false, // 通常屏幕共享不共享系统音频
+          'video': {
+            'deviceId': {'exact': source.id}, // 精确匹配用户选择的源ID
+            'mandatory': {'frameRate': 30.0}, // 可以设置帧率
+          },
+        },
+      );
+
+      final screenTrack =
+          stream.getVideoTracks().firstOrNull; // 使用 firstOrNull 防止空指针
       if (screenTrack == null) {
         throw "无法获取屏幕共享视频轨道";
       }
@@ -574,8 +649,33 @@ class RtcCallController extends ChangeNotifier {
       _log("❌ 屏幕共享失败", e.toString());
       _isScreenSharing = false; // 确保状态正确
       // hangUp(); // 如果是关键错误，可以考虑挂断
-      rethrow;
+      if (e.toString().contains("source not found")) {
+        _showWindowsScreenCaptureGuide();
+      }
     }
+  }
+
+  void _showWindowsScreenCaptureGuide() {
+    showDialog(
+      context: main.globalContext,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text("屏幕共享需要权限"),
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("请完成以下步骤："),
+                SizedBox(height: 16),
+                Text("1. 打开 Windows 设置 → 隐私 → 屏幕截图权限"),
+                Text("2. 开启 '允许应用访问屏幕截图'"),
+                Text("3. 确保 '允许桌面应用访问' 已启用"),
+                SizedBox(height: 16),
+                ElevatedButton(onPressed: () {}, child: Text("打开隐私设置")),
+              ],
+            ),
+          ),
+    );
   }
 
   /// 停止屏幕共享并恢复摄像头。
