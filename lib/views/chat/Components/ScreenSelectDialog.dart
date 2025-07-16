@@ -18,53 +18,133 @@ class _ScreenSelectDialogState extends State<ScreenSelectDialog> {
 
   @override
   Widget build(BuildContext context) {
+
+    
     return AlertDialog(
-      title: const Text('选择屏幕共享内容'),
+      title: const Text('选择屏幕共享内容', style: TextStyle(fontWeight: FontWeight.bold)),
+      contentPadding: const EdgeInsets.fromLTRB(20.0, 24.0, 20.0, 0.0), // 调整内容内边距
       content: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.8, // 对话框宽度占屏幕的80%
-        height: MediaQuery.of(context).size.height * 0.6, // 对话框高度占屏幕的60%
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min, // 根据内容调整高度
-            children: [
-              if (widget.sources.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text('没有可用的屏幕或窗口源。'),
+        width: MediaQuery.of(context).size.width * 0.85, // 宽度稍微增加，容纳更大截图
+        height: MediaQuery.of(context).size.height * 0.7, // 高度增加，显示更多内容
+        child: Column(
+          children: [
+            if (widget.sources.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Text('没有可用的屏幕或窗口源。', style: TextStyle(fontSize: 16)),
+              ),
+            Expanded( // 使用 Expanded 让列表占据剩余空间
+              child: GridView.builder( // 使用 GridView 来并排显示截图
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2, // 每行显示2个截图
+                  crossAxisSpacing: 16.0, // 列间距
+                  mainAxisSpacing: 16.0, // 行间距
+                  childAspectRatio: 1.5, // 宽高比，可以根据截图实际比例调整
                 ),
-              ...widget.sources.map((source) {
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8.0),
-                  elevation: _selectedSource == source ? 8 : 2, // 选中时有更大阴影
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                    side: _selectedSource == source
-                        ? const BorderSide(color: Colors.blueAccent, width: 2.0) // 选中时有蓝色边框
-                        : BorderSide.none,
-                  ),
-                  child: ListTile(
-                    leading: source.thumbnail != null // 如果有缩略图就显示
-                        ? Image.memory(
-                            source.thumbnail!,
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                          )
-                        : const Icon(Icons.monitor), // 没有缩略图就显示通用图标
-                    title: Text(source.name ?? '未知来源'), // 显示源名称
-                    subtitle: Text(source.type == SourceType.Screen ? '屏幕' : '窗口'), // 显示类型
+                itemCount: widget.sources.length,
+                itemBuilder: (context, index) {
+                  final source = widget.sources[index];
+                  final isSelected = _selectedSource == source;
+                  return GestureDetector( // 使用 GestureDetector 替代 ListTile 以便更自由布局
                     onTap: () {
                       setState(() {
-                        _selectedSource = source; // 更新选中状态
+                        _selectedSource = source;
                       });
                     },
-                    selected: _selectedSource == source, // ListTile的选中状态
-                    selectedTileColor: Colors.blue.withOpacity(0.1), // 选中时的背景色
-                  ),
-                );
-              }).toList(),
-            ],
-          ),
+                    child: AnimatedContainer( // 增加动画效果，选中时有过渡
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      decoration: BoxDecoration(
+                        color: isSelected ? Colors.blue.withOpacity(0.15) : Colors.white,
+                        borderRadius: BorderRadius.circular(12.0),
+                        border: Border.all(
+                          color: isSelected ? Colors.blueAccent : Colors.grey.shade300,
+                          width: isSelected ? 3.0 : 1.0,
+                        ),
+                        boxShadow: [
+                          if (isSelected)
+                            BoxShadow(
+                              color: Colors.blueAccent.withOpacity(0.3),
+                              spreadRadius: 2,
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch, // 让内容横向拉伸
+                        children: [
+                          Expanded( // 截图占据大部分空间
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: ClipRRect( // 圆角裁剪图片
+                                borderRadius: BorderRadius.circular(8.0),
+                                child: source.thumbnail != null // ✅ 再次确认 thumbnail 不为 null
+                                    ? Image.memory(
+                                        source.thumbnail!, // 如果确定非空才使用!
+                                        fit: BoxFit.cover, // 覆盖整个可用空间
+                                        errorBuilder: (context, error, stackTrace) =>
+                                            const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
+                                      )
+                                    : Center( // ✅ 当 thumbnail 为 null 时的替代方案
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              source.type == SourceType.Screen ? Icons.monitor : Icons.window,
+                                              size: 60,
+                                              color: Colors.grey,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            const Text(
+                                              '无预览',
+                                              style: TextStyle(color: Colors.grey, fontSize: 12),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  source.name ?? '未知来源',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: isSelected ? Colors.blue : Colors.black87,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  source.type == SourceType.Screen ? '屏幕' : '窗口',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isSelected ? Colors.blue.shade700 : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
       actions: [

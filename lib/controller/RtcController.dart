@@ -594,6 +594,7 @@ class RtcCallController extends ChangeNotifier {
     try {
       final sources = await desktopCapturer.getSources(
         types: [SourceType.Screen, SourceType.Window],
+        thumbnailSize: ThumbnailSize(320, 240), // 设置缩略图大小
       );
 
       final source = await showDialog<DesktopCapturerSource>(
