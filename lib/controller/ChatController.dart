@@ -8,7 +8,7 @@ import 'package:notepad/controller/mixin/MessageMixin.dart';
 import 'package:notepad/controller/mixin/RoomMixin.dart';
 import 'package:notepad/controller/mixin/UserMixin.dart';
 import 'package:notepad/main.dart' as main;
-import 'package:notepad/views/chat/Components/CallScreen.dart'; // 确认此路径指向 VideoCallPage
+import 'package:notepad/views/chat/Components/VideoCallPage.dart';
 
 import '../common/domain/ChatEnumAll.dart';
 import '../common/domain/ChatMessage.dart';
@@ -69,12 +69,15 @@ class ChatController extends ChangeNotifier
       }
     });
   }
+
+
+  
   // 添加缓存未处理Offer的Map
   final Map<String, Map<String, dynamic>> _pendingOffers = {};
 
   /// 处理所有 WebRTC 相关的信令消息
   void _handleRtcSignalingMessage(ChatMessage msg) {
-    // 如果是自己发送的信令（防止自发自收，尽管通常服务端会处理）
+    // 如果是自己发送的信令（防止自发自收）
     if (msg.senderId == authController.currentUser?.id) {
       // 可以在这里处理自己发送信令后的UI反馈，例如等待对方接听等
       return;
@@ -82,20 +85,15 @@ class ChatController extends ChangeNotifier
 
     _currentCallPeerId = msg.senderId; // 记录当前通话的对方ID
 
+    /// 处理信令消息
     switch (msg.type) {
       case MessageType.videoCall:
         // 收到视频通话请求 (被叫方)
-        AnoToast.showToast(
-          "收到来自 ${msg.senderId} 的视频通话请求",
-          type: ToastType.info,
-        );
         DialogUtil.showGlobalDialog(_buildIncomingCallDialog(msg));
         break;
       case MessageType.videoAnswer:
         // 对方已接听 (主叫方收到)
-        AnoToast.showToast("对方已接听", type: ToastType.info);
         // 如果当前通话页面已存在，不需要重复导航
-        // 确保 rtcCallController 已经根据 isOffer:true 初始化
         if (!rtcCallController.inCalling) {
           // 重新初始化或处理异常
         }
@@ -103,13 +101,12 @@ class ChatController extends ChangeNotifier
       case MessageType.videoReject:
         // 对方拒绝通话 (主叫方收到)
         AnoToast.showToast("对方已拒绝通话", type: ToastType.info);
-        rtcCallController.hangUp(); // 本地挂断并清理资源
+        rtcCallController.hangUp();
         // 关闭可能的通话页面
         _popVideoCallPageIfOpen();
         break;
       case MessageType.videoHangup:
         // 对方已挂断 (双方都可能收到)
-        AnoToast.showToast("对方已挂断通话", type: ToastType.info);
         rtcCallController.hangUp(); // 本地挂断并清理资源
         // 关闭可能的通话页面
         _popVideoCallPageIfOpen();
@@ -197,7 +194,7 @@ class ChatController extends ChangeNotifier
                 ),
               );
 
-              // 接听成功后，向对方发送接听信令（可选，如果需要明确状态）
+              // 接听成功后，向对方发送接听信令
               sendVideoAnswer(msg.senderId, msg.roomId);
             } catch (e) {
               AnoToast.showToast(
@@ -218,11 +215,6 @@ class ChatController extends ChangeNotifier
   void sendVideoCallRequest() {
     final currentUser = authController.currentUser;
     final targetId = determineReceiverId(currentUser!.id); // 确定呼叫目标ID
-
-    if (currentUser == null || targetId == null) {
-      AnoToast.showToast("无法发起通话：用户未登录或未选择通话对象", type: ToastType.error);
-      return;
-    }
 
     // 1. 发送 'videoCall' 消息给对方，告知其有来电
     final callMessage = ChatMessage(
@@ -330,7 +322,7 @@ class ChatController extends ChangeNotifier
         _currentCallPeerId ??
         determineReceiverId(currentUser!.id); // 优先使用当前通话对象
 
-    if (currentUser == null || targetId == null) {
+    if (currentUser == null) {
       // 如果没有正在进行的通话对象，可能不需要发送挂断信令，只清理本地状态
       rtcCallController.hangUp();
       _popVideoCallPageIfOpen();

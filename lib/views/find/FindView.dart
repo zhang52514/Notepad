@@ -1,5 +1,8 @@
+import 'dart:convert';
+
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
-import 'package:notepad/views/chat/Components/CallScreen.dart';
+import 'package:notepad/views/chat/Components/VideoCallPage.dart';
 
 class FindView extends StatefulWidget {
   const FindView({super.key});
@@ -9,10 +12,10 @@ class FindView extends StatefulWidget {
 }
 
 class _FindViewState extends State<FindView> {
+
+
   @override
   Widget build(BuildContext context) {
-    return  const Center(
-      child: Text("data")
-    );
+    return VideoCallPage(isCaller: true, callTargetId: 'target_user_id');
   }
 }

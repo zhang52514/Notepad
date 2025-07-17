@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -324,10 +323,7 @@ class RtcCallController extends ChangeNotifier {
   }
 
   /// 处理收到的 Offer 并创建 Answer (被叫方)
-  Future<void> handleOffer(
-    Map<String, dynamic> data,
-    SignalSender onSignalSend,
-  ) async {
+  Future<void> handleOffer(Map<String, dynamic> data,SignalSender onSignalSend) async {
     try {
       _log("处理Offer", "SDP: ${data['sdp']?.toString().substring(0, 30)}...");
 
@@ -408,10 +404,7 @@ class RtcCallController extends ChangeNotifier {
   }
 
   /// 统一处理所有信令
-  void handleSignal(
-    Map<String, dynamic> signalData,
-    SignalSender onSignalSend,
-  ) {
+  void handleSignal( Map<String, dynamic> signalData, SignalSender onSignalSend) {
     if (!signalData.containsKey('type')) {
       _log("警告", "接收到无效信令，缺少 'type' 字段: $signalData");
       return;
@@ -429,8 +422,7 @@ class RtcCallController extends ChangeNotifier {
       case 'candidate':
         handleCandidate(signalData);
         break;
-      case 'hangup': // 新增：处理对方发来的挂断信令
-        _log("收到挂断信令", "对方已挂断");
+      case 'hangup':
         hangUp();
         break;
       default:

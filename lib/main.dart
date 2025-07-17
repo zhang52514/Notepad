@@ -40,15 +40,12 @@ Future<void> main() async {
   await windowManager.ensureInitialized();
 
   ///窗体设置
-  WindowOptions windowOptions = const WindowOptions(
-    size: Size(1000, 600),
-    minimumSize: Size(1000, 600),
+  WindowOptions windowOptions = WindowOptions(
+    size: Size(800, 600),
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
-    alwaysOnTop: false,
     titleBarStyle: TitleBarStyle.hidden,
-    title: "Anoxia-Windows",
   );
 
   windowManager.waitUntilReadyToShow(windowOptions, () async {
