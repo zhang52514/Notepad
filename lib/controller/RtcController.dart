@@ -42,6 +42,8 @@ class RtcCallController extends ChangeNotifier {
   bool _isCameraOff = false; // 摄像头是否关闭
   bool get isCameraOff => _isCameraOff;
 
+  bool _isCaller = false; // 标记是否为主叫
+
   bool isSwapped = false; // 是否交换了本地和远程视频流
   void setSwapped(bool value) {
     isSwapped = value;
@@ -68,10 +70,12 @@ class RtcCallController extends ChangeNotifier {
   final Map<String, dynamic> _iceServers = {
     'iceServers': [
       {
+        'urls': ['stun:stun.l.google.com:19302'],
+      },
+      {
         'urls': [
           'turn:anoxia.cn:3478?transport=udp',
           'turn:anoxia.cn:3478?transport=tcp',
-          // 'turns:anoxia.cn:5349?transport=tcp',
         ],
         'username': 'admin',
         'credential': '123456',
@@ -112,7 +116,7 @@ class RtcCallController extends ChangeNotifier {
   }
 
   // --- 通话初始化 ---
-  /// 初始化通话并根据 `isOffer` 决定是发起方还是接收方。
+  /// 初始化通话并根据 `isOffer` 决定是发起方还是接收方。··
   /// `onSignalSend` 用于发送信令到对方。
   Future<void> initCall({
     required bool isOffer,
@@ -224,9 +228,9 @@ class RtcCallController extends ChangeNotifier {
         final constraints = {
           'audio': true,
           'video': {'deviceId': selectedDeviceId}, // 使用选定的设备ID
-          'width': {'ideal': 1920},
-          'height': {'ideal': 1080},
-          'frameRate': {'ideal': 60, 'max': 120},
+          'width': {'ideal': 1280},
+          'height': {'ideal': 720},
+          'frameRate': {'ideal': 30, 'max': 120},
         };
         _localCameraStream = await navigator.mediaDevices.getUserMedia(
           constraints,
@@ -369,7 +373,7 @@ class RtcCallController extends ChangeNotifier {
     SignalSender onSignalSend,
   ) async {
     try {
-      _log("处理Offer", "SDP: ${data['sdp']?.toString().substring(0, 30)}...");
+      // _log("处理Offer", "SDP: ${data['sdp']?.toString().substring(0, 30)}...");
 
       // 确保本地媒体流和PeerConnection已初始化
       if (_localCameraStream == null) await _getUserMedia();
@@ -398,7 +402,7 @@ class RtcCallController extends ChangeNotifier {
       await _peerConnection!.setLocalDescription(answer);
 
       _log("Answer 创建成功", "类型: ${answer.type}");
-      _log("Answer SDP", answer.sdp ?? "SDP is null");
+      // _log("Answer SDP", answer.sdp ?? "SDP is null");
       await onSignalSend(answer.toMap());
     } catch (e) {
       _log("❌ 创建Answer失败", e.toString());
@@ -622,12 +626,21 @@ class RtcCallController extends ChangeNotifier {
     }
 
     // 通常 replaceTrack 会触发 renegotiationNeeded 事件，但手动触发可能更稳健
-    // if (_peerConnection!.signalingState == RTCSignalingState.RTCSignalingStateStable) {
-    //   _log("触发 Offer 重新协商", "");
-    //   // TODO: 这里需要一个机制来判断当前是主叫还是被叫，并根据角色重新发起 Offer/Answer
-    //   // 这通常需要信令服务提供一个方法来触发协商
-    // }
+    if (_peerConnection!.signalingState ==
+        RTCSignalingState.RTCSignalingStateStable) {
+      _log("触发 Offer 重新协商", "");
+      //TODO
+    }
     notifyListeners();
+  }
+
+  Future<void> renegotiate(SignalSender onSignalSend) async {
+    if (_isCaller && _peerConnection != null) {
+      final offer = await _peerConnection!.createOffer();
+      await _peerConnection!.setLocalDescription(offer);
+      onSignalSend(offer.toMap());
+      _log("重新协商 Offer 发送", "");
+    }
   }
 
   // --- 屏幕共享功能 ---
@@ -658,9 +671,9 @@ class RtcCallController extends ChangeNotifier {
           'audio': false, // 通常屏幕共享不共享系统音频
           'video': {
             'deviceId': {'exact': source.id},
-            'width': {'ideal': 1920},
-            'height': {'ideal': 1080},
-            'frameRate': {'ideal': 60, 'max': 120},
+            'width': {'ideal': 1280},
+            'height': {'ideal': 720},
+            'frameRate': {'ideal': 30, 'max': 120},
           },
         },
       );

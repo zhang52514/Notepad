@@ -88,7 +88,7 @@ class WebSocketService {
   void send(Map<String, dynamic> message) {
     if (_status == WebSocketConnectionStatus.connected) {
       _channel?.sink.add(json.encode(message));
-      print("向服务器发送消息:${json.encode(message)}");
+      // print("向服务器发送消息:${json.encode(message)}");
     } else {
       _pendingMessages.add(message);
       _log("向服务器发送消息失败了: ${json.encode(message)}");
