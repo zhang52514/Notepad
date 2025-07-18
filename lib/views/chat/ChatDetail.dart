@@ -13,9 +13,9 @@ import 'package:notepad/common/utils/DateUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/ChatMessageBubble.dart';
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/MessagePayload.dart';
-import 'package:notepad/views/chat/Components/ChatInputBar.dart';
-import 'package:notepad/views/chat/Components/WelcomePage.dart';
-import 'package:notepad/views/chat/Components/NoDataPage.dart';
+import 'package:notepad/views/chat/Components/ChatInputBar/ChatInputBar.dart';
+import 'package:notepad/views/chat/Components/PageStatus/WelcomePage.dart';
+import 'package:notepad/views/chat/Components/PageStatus/NoDataPage.dart';
 
 /// 显示消息项的数据结构
 /// 包含 ChatMessage 或 时间标签 (String)，以及消息原始索引（仅 ChatMessage 有效）

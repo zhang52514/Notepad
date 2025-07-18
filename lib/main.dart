@@ -41,7 +41,7 @@ Future<void> main() async {
 
   ///窗体设置
   WindowOptions windowOptions = WindowOptions(
-    size: Size(800, 600),
+    size: Size(1200, 800),
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,

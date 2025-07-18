@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
-import 'package:notepad/views/chat/Components/VideoCallPage.dart';
+import 'package:notepad/views/chat/Components/VideoCall/VideoCallPage.dart';
 
 class FindView extends StatefulWidget {
   const FindView({super.key});

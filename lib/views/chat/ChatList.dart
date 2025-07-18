@@ -4,7 +4,7 @@ import 'package:notepad/common/module/VibratingBadge.dart';
 import 'package:notepad/common/utils/DateUtil.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
-import 'package:notepad/views/chat/Components/LastMessagePreview.dart';
+import 'package:notepad/views/chat/Components/ChatLeftList/LastMessagePreview.dart';
 
 import '../../common/module/AvatarWidget.dart';
 

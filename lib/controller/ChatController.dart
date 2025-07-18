@@ -8,7 +8,7 @@ import 'package:notepad/controller/mixin/MessageMixin.dart';
 import 'package:notepad/controller/mixin/RoomMixin.dart';
 import 'package:notepad/controller/mixin/UserMixin.dart';
 import 'package:notepad/main.dart' as main;
-import 'package:notepad/views/chat/Components/VideoCallPage.dart';
+import 'package:notepad/views/chat/Components/VideoCall/VideoCallPage.dart';
 
 import '../common/domain/ChatEnumAll.dart';
 import '../common/domain/ChatMessage.dart';
@@ -102,14 +102,10 @@ class ChatController extends ChangeNotifier
         // 对方拒绝通话 (主叫方收到)
         AnoToast.showToast("对方已拒绝通话", type: ToastType.info);
         rtcCallController.hangUp();
-        // 关闭可能的通话页面
-        _popVideoCallPageIfOpen();
         break;
       case MessageType.videoHangup:
         // 对方已挂断 (双方都可能收到)
         rtcCallController.hangUp(); // 本地挂断并清理资源
-        // 关闭可能的通话页面
-        _popVideoCallPageIfOpen();
         break;
       case MessageType.signal:
         // WebRTC 信令 (SDP Offer/Answer, ICE Candidate)
@@ -202,7 +198,6 @@ class ChatController extends ChangeNotifier
                 type: ToastType.error,
               );
               rtcCallController.hangUp(); // 确保清理资源
-              _popVideoCallPageIfOpen(); // 确保关闭页面
             }
           },
           child: const Text("接听"),
@@ -267,7 +262,6 @@ class ChatController extends ChangeNotifier
             type: ToastType.error,
           );
           rtcCallController.hangUp(); // 确保清理资源
-          _popVideoCallPageIfOpen(); // 确保关闭页面
         });
   }
 
@@ -291,7 +285,6 @@ class ChatController extends ChangeNotifier
     );
     sendMessage(message);
     rtcCallController.hangUp(); // 挂断本地通话
-    _popVideoCallPageIfOpen(); // 关闭可能的通话页面
   }
 
   /// 发送视频通话接听信令
@@ -325,7 +318,6 @@ class ChatController extends ChangeNotifier
     if (currentUser == null) {
       // 如果没有正在进行的通话对象，可能不需要发送挂断信令，只清理本地状态
       rtcCallController.hangUp();
-      _popVideoCallPageIfOpen();
       AnoToast.showToast("已挂断本地通话", type: ToastType.info);
       return;
     }
@@ -346,7 +338,6 @@ class ChatController extends ChangeNotifier
     sendMessage(message);
     rtcCallController.hangUp(); // 挂断本地通话
     AnoToast.showToast("已挂断通话", type: ToastType.info);
-    _popVideoCallPageIfOpen(); // 关闭可能的通话页面
   }
 
   /// 内部辅助函数，用于发送 WebRTC 信令消息
@@ -371,14 +362,6 @@ class ChatController extends ChangeNotifier
         timestamp: DateTime.now(),
       ),
     );
-  }
-
-  /// 辅助函数：关闭当前导航栈中的 VideoCallPage（如果有的话）
-  void _popVideoCallPageIfOpen() {
-    // 这里只能简单地 pop，如果可以 pop 的话
-    if (main.navigatorKey.currentState?.canPop() ?? false) {
-      main.navigatorKey.currentState?.pop();
-    }
   }
 
   /// 统一发送消息到 WebSocket

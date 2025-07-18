@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:notepad/core/SimpleFileLogger.dart'; // 确保路径正确
 import 'package:notepad/main.dart' as main;
-import 'package:notepad/views/chat/Components/ScreenSelectDialog.dart';
+import 'package:notepad/views/chat/Components/VideoCall/ScreenSelectDialog.dart';
 
 // 定义信令发送函数类型
 typedef SignalSender = Function(Map<String, dynamic> signal);
@@ -16,16 +16,18 @@ class RtcCallController extends ChangeNotifier {
     SimpleFileLogger.log('[WebRTC][$timestamp] $label ${details ?? ''}');
   }
 
+  // --- 通话时长管理 ---
+  DateTime? _callStartTime;
+  Timer? _durationTimer;
+  Duration get callDuration =>
+      _callStartTime == null
+          ? Duration.zero
+          : DateTime.now().difference(_callStartTime!);
+
+  // --- 超时及无应答标记 ---
   Timer? _callTimeoutTimer;
-  RTCIceConnectionState? _iceState;
-  void _startCallTimeout() {
-    _callTimeoutTimer = Timer(const Duration(seconds: 30), () {
-      if (!isConnected) {
-        hangUp();
-        // 通知对方超时
-      }
-    });
-  }
+  bool _noResponse = false;
+  bool get noResponse => _noResponse;
 
   // --- 状态标志 ---
   bool _inCalling = false; // 是否在通话中
@@ -39,6 +41,13 @@ class RtcCallController extends ChangeNotifier {
 
   bool _isCameraOff = false; // 摄像头是否关闭
   bool get isCameraOff => _isCameraOff;
+
+  bool isSwapped = false; // 是否交换了本地和远程视频流
+  void setSwapped(bool value) {
+    _log("设置视频流交换状态", "交换状态: $value");
+    isSwapped = value;
+    notifyListeners();
+  }
 
   // --- WebRTC 核心对象 ---
   RTCPeerConnection? _peerConnection;
@@ -99,7 +108,7 @@ class RtcCallController extends ChangeNotifier {
   @override
   void dispose() {
     _log("控制器销毁中...");
-    _cleanUpResources(); // 清理所有 WebRTC 相关资源
+    hangUp(); // 清理所有 WebRTC 相关资源
     super.dispose();
   }
 
@@ -114,13 +123,15 @@ class RtcCallController extends ChangeNotifier {
       _log("已在通话中，跳过初始化");
       return;
     }
-
+    // 立即将状态设置为通话中，并锁定
+    _inCalling = true;
+    notifyListeners();
     try {
       await _getUserMedia(); // 获取本地摄像头/麦克风流
       _log(
-        "✅ 本地媒体流获取成功",
+        "本地媒体流获取成功",
         "音频轨道: ${_localCameraStream!.getAudioTracks().length}, "
-            "视频轨道: ${_localCameraStream!.getVideoTracks().length}, " // 检查这里是否 > 0
+            "视频轨道: ${_localCameraStream!.getVideoTracks().length}, "
             "设备ID: $_currentCameraDeviceId",
       );
 
@@ -131,23 +142,43 @@ class RtcCallController extends ChangeNotifier {
         _peerConnection!.addTrack(track, _localCameraStream!);
         _log("添加本地摄像头/麦克风轨道", "类型: ${track.kind}, ID: ${track.id}");
       });
+
+      // 启动超时 & 时长
       _startCallTimeout();
+      _callStartTime = DateTime.now();
+      _durationTimer?.cancel();
+      _durationTimer = Timer.periodic(Duration(seconds: 1), (_) {
+        notifyListeners();
+      });
+
       if (isOffer) {
         await createOffer(onSignalSend); // 如果是主叫，创建 Offer
       }
-
       _inCalling = true; // 设置通话状态为进行中
       notifyListeners(); // 通知 UI 更新
       _log("通话初始化完成", "角色: ${isOffer ? '主叫' : '被叫'}");
     } on PlatformException catch (e) {
       _log("❌ 通话初始化平台异常", "代码: ${e.code}, 消息: ${e.message}");
-      _cleanUpResources();
+      hangUp();
       throw "无法访问媒体设备: ${e.message}"; // 向上抛出更友好的错误信息
     } catch (e) {
       _log("❌ 通话初始化失败", e.toString());
-      _cleanUpResources();
+      hangUp();
       rethrow; // 重新抛出其他错误
     }
+  }
+
+  void _startCallTimeout() {
+    _noResponse = false;
+    _callTimeoutTimer?.cancel();
+    _callTimeoutTimer = Timer(Duration(seconds: 60), () {
+      if (!isConnected) {
+        _noResponse = true;
+        _log("对方无应答，超时");
+        notifyListeners();
+        hangUp();
+      }
+    });
   }
 
   // --- 获取本地媒体流 (摄像头/麦克风) ---
@@ -176,7 +207,7 @@ class RtcCallController extends ChangeNotifier {
           deviceId ??
           _videoDevices
               .firstWhereOrNull(
-                (device) => device.deviceId != null, // 找到第一个有DeviceId的设备
+                (device) => true, // 找到第一个设备
                 orElse:
                     () => MediaDeviceInfo(
                       label: '',
@@ -246,7 +277,7 @@ class RtcCallController extends ChangeNotifier {
       }
     } catch (e) {
       _log("❌ 创建PeerConnection失败", e.toString());
-      _cleanUpResources();
+      hangUp();
       rethrow;
     }
   }
@@ -292,11 +323,12 @@ class RtcCallController extends ChangeNotifier {
       notifyListeners(); // 通知 UI 更新连接状态
     };
 
-    _peerConnection!.onIceConnectionState = (state) {
-      _log("ICE 连接状态", state.toString());
-      _iceState = state;
-      notifyListeners();
-    };
+    // _peerConnection!.onIceConnectionState = (state) {
+    //   _log("ICE 连接状态", state.toString());
+    //   _iceState = state;
+    //   notifyListeners();
+    // };
+
     _peerConnection!.onSignalingState = (state) {
       _log("onSignalingState 状态", state.toString());
       notifyListeners();
@@ -323,7 +355,10 @@ class RtcCallController extends ChangeNotifier {
   }
 
   /// 处理收到的 Offer 并创建 Answer (被叫方)
-  Future<void> handleOffer(Map<String, dynamic> data,SignalSender onSignalSend) async {
+  Future<void> handleOffer(
+    Map<String, dynamic> data,
+    SignalSender onSignalSend,
+  ) async {
     try {
       _log("处理Offer", "SDP: ${data['sdp']?.toString().substring(0, 30)}...");
 
@@ -404,7 +439,10 @@ class RtcCallController extends ChangeNotifier {
   }
 
   /// 统一处理所有信令
-  void handleSignal( Map<String, dynamic> signalData, SignalSender onSignalSend) {
+  void handleSignal(
+    Map<String, dynamic> signalData,
+    SignalSender onSignalSend,
+  ) {
     if (!signalData.containsKey('type')) {
       _log("警告", "接收到无效信令，缺少 'type' 字段: $signalData");
       return;
@@ -434,38 +472,46 @@ class RtcCallController extends ChangeNotifier {
   /// 挂断当前通话并清理所有资源。
   void hangUp() {
     _log("执行挂断通话流程");
+    // 清理所有 WebRTC 相关资源，停止媒体流并关闭 PeerConnection
     _cleanUpResources();
-    _inCalling = false; // 重置通话状态
-    _isScreenSharing = false; // 重置屏幕共享状态
-    _isMicMuted = false; // 重置麦克风状态
-    _isCameraOff = false; // 重置摄像头状态
-    _currentCameraDeviceId = null; // 重置当前设备ID
-    _cachedCandidates.clear(); // 清除缓存候选
-    notifyListeners(); // 通知 UI 更新
-    _log("挂断完成");
+    // 重置通话状态和标志
+    _inCalling = false;
+    _isScreenSharing = false;
+    _isMicMuted = false;
+    _isCameraOff = false;
+    _noResponse = false;
+    setSwapped(false);
+    // 重置通话时长相关
+    _callStartTime = null;
+    _durationTimer?.cancel();
+    _callTimeoutTimer?.cancel();
+    // 返回到前一个页面（如果可返回）
+    if (main.navigatorKey.currentState?.canPop() ?? false) {
+      main.navigatorKey.currentState?.pop();
+    }
+    notifyListeners();
+    _log("挂断完成，已重置所有状态");
   }
 
-  /// 清理所有 WebRTC 相关资源。
+  // --- 清理所有 WebRTC 相关资源 ---
   void _cleanUpResources() {
     _log("清理所有 WebRTC 资源...");
-
-    // 停止并清理屏幕共享流
-    _screenShareStream?.getTracks().forEach((track) => track.stop());
+    // 停止并 dispose 屏幕共享流
+    _screenShareStream?.getTracks().forEach((t) => t.stop());
     _screenShareStream?.dispose();
     _screenShareStream = null;
-    // 停止并清理本地摄像头/麦克风流
-    _localCameraStream?.getTracks().forEach((track) => track.stop());
+    // 停止并 dispose 本地摄像头/麦克风流
+    _localCameraStream?.getTracks().forEach((t) => t.stop());
     _localCameraStream?.dispose();
     _localCameraStream = null;
-
-    // 关闭 PeerConnection
+    // 关闭并置空 PeerConnection
     _peerConnection?.close();
     _peerConnection = null;
-
-    // 重置渲染器源
+    // 清空渲染器源，避免内存泄漏
     _localRenderer.srcObject = null;
     _remoteRenderer.srcObject = null;
-
+    // 清除 ICE 候选缓存
+    _cachedCandidates.clear();
     _log("资源清理完成");
   }
 
@@ -516,7 +562,7 @@ class RtcCallController extends ChangeNotifier {
     // 获取下一个设备的ID
     String? nextDeviceId = _videoDevices[nextIndex].deviceId;
 
-    if (nextDeviceId != null && nextDeviceId.isNotEmpty) {
+    if (nextDeviceId.isNotEmpty) {
       _log("切换摄像头", "从 $_currentCameraDeviceId 到 $nextDeviceId");
       await _getUserMedia(deviceId: nextDeviceId); // 使用新的设备ID重新获取本地流
       // 重新将流添加到 PeerConnection (这会触发协商)
@@ -610,7 +656,7 @@ class RtcCallController extends ChangeNotifier {
           },
         },
       );
-
+      _screenShareStream = stream;
       final screenTrack =
           stream.getVideoTracks().firstOrNull; // 使用 firstOrNull 防止空指针
       if (screenTrack == null) {

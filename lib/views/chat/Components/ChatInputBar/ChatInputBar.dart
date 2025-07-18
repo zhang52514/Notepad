@@ -16,10 +16,10 @@ import 'package:notepad/views/chat/Components/ChatInputBar/AtUserListWidget.dart
 import 'package:provider/provider.dart';
 import 'package:path/path.dart' as p;
 
-import 'ChatEmojiWidget.dart';
-import 'ChatInputBar/QuillCustomBuild/AtBuilder.dart';
-import 'ChatInputBar/QuillCustomBuild/FileBuilder.dart';
-import 'ChatInputBar/QuillCustomBuild/ImageBuilder.dart';
+import '../Emoji/ChatEmojiWidget.dart';
+import 'QuillCustomBuild/AtBuilder.dart';
+import 'QuillCustomBuild/FileBuilder.dart';
+import 'QuillCustomBuild/ImageBuilder.dart';
 
 class ChatInputBar extends StatefulWidget {
   final ChatController chatController;
