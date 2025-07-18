@@ -224,6 +224,9 @@ class RtcCallController extends ChangeNotifier {
         final constraints = {
           'audio': true,
           'video': {'deviceId': selectedDeviceId}, // 使用选定的设备ID
+          'width': {'ideal': 1920},
+          'height': {'ideal': 1080},
+          'frameRate': {'ideal': 60, 'max': 120},
         };
         _localCameraStream = await navigator.mediaDevices.getUserMedia(
           constraints,
