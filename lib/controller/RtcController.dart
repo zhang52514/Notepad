@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:notepad/controller/mixin/WebRTCStatsMixin.dart';
 import 'package:notepad/core/SimpleFileLogger.dart'; // 确保路径正确
 import 'package:notepad/main.dart' as main;
 import 'package:notepad/views/chat/Components/VideoCall/ScreenSelectDialog.dart';
@@ -9,7 +10,7 @@ import 'package:notepad/views/chat/Components/VideoCall/ScreenSelectDialog.dart'
 // 定义信令发送函数类型
 typedef SignalSender = Function(Map<String, dynamic> signal);
 
-class RtcCallController extends ChangeNotifier {
+class RtcCallController extends ChangeNotifier with WebRTCStatsMixin {
   // --- 日志工具 ---
   void _log(String label, [String? details]) {
     final timestamp = DateTime.now().toIso8601String();
@@ -111,6 +112,7 @@ class RtcCallController extends ChangeNotifier {
   @override
   void dispose() {
     _log("控制器销毁中...");
+    stopStats();
     hangUp(); // 清理所有 WebRTC 相关资源
     super.dispose();
   }
@@ -325,12 +327,14 @@ class RtcCallController extends ChangeNotifier {
             notifyListeners(); // 每秒更新一次UI以显示时长
           });
           _log("通话时长计时器已启动");
+          startStats();
         }
       } else if (state ==
               RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
         _log("连接终止", "状态: $state, 自动挂断");
+        stopStats();
         hangUp();
       }
       notifyListeners(); // 通知 UI 更新连接状态
@@ -359,7 +363,7 @@ class RtcCallController extends ChangeNotifier {
       final offer = await _peerConnection!.createOffer();
       await _peerConnection!.setLocalDescription(offer);
 
-      _log("Offer 创建成功", "类型: ${offer.type}");
+      _log("主叫方 Offer 创建成功", "类型: ${offer.type}--->${offer.toMap()}");
       await onSignalSend(offer.toMap());
     } catch (e) {
       _log("❌ 创建Offer失败", e.toString());
@@ -373,7 +377,7 @@ class RtcCallController extends ChangeNotifier {
     SignalSender onSignalSend,
   ) async {
     try {
-      // _log("处理Offer", "SDP: ${data['sdp']?.toString().substring(0, 30)}...");
+      // _log("被叫方处理Offer", "SDP: ${data['sdp']?.toString()}...");
 
       // 确保本地媒体流和PeerConnection已初始化
       if (_localCameraStream == null) await _getUserMedia();
@@ -402,7 +406,7 @@ class RtcCallController extends ChangeNotifier {
       await _peerConnection!.setLocalDescription(answer);
 
       _log("Answer 创建成功", "类型: ${answer.type}");
-      // _log("Answer SDP", answer.sdp ?? "SDP is null");
+      _log("被叫方创建 Answer SDP", answer.sdp ?? "SDP is null");
       await onSignalSend(answer.toMap());
     } catch (e) {
       _log("❌ 创建Answer失败", e.toString());
@@ -417,7 +421,7 @@ class RtcCallController extends ChangeNotifier {
       return;
     }
     try {
-      _log("处理Answer", "SDP: ${data['sdp']?.toString().substring(0, 30)}...");
+      _log("处理Answer", "SDP: ${data['sdp']?.toString()}...");
 
       await _peerConnection?.setRemoteDescription(
         RTCSessionDescription(data['sdp'], data['type']),
@@ -502,6 +506,7 @@ class RtcCallController extends ChangeNotifier {
     // 清理超时计时器
     _callTimeoutTimer?.cancel();
     _callTimeoutTimer = null; // 置空
+    stopStats();
     // 返回到前一个页面（如果可返回）
     while (main.navigatorKey.currentState?.canPop() ?? false) {
       main.navigatorKey.currentState?.pop();
@@ -795,6 +800,15 @@ class RtcCallController extends ChangeNotifier {
       rethrow;
     }
   }
+
+  @override
+  void log(String label, [String? details]) {
+    final timestamp = DateTime.now().toIso8601String();
+    SimpleFileLogger.log('[WebRTC][$timestamp] $label ${details ?? ''}');
+  }
+
+  @override
+  RTCPeerConnection? get peerConnection => _peerConnection;
 }
 
 // 辅助扩展：用于安全地获取列表中的第一个元素或 null
