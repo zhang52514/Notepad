@@ -7,6 +7,7 @@ import 'package:notepad/views/chat/HomeIndex.dart';
 import 'package:notepad/views/chat/HomeView.dart';
 import 'package:notepad/views/mine/MineView.dart';
 import 'package:notepad/views/notpad/NotPadView.dart';
+import 'package:notepad/views/setup/SetUpView.dart';
 
 class MainController extends ChangeNotifier {
   /// Brightness
@@ -44,7 +45,7 @@ class MainController extends ChangeNotifier {
     NotPadView(),
     FindView(),
     MineView(),
-    HomeIndex(),
+    SetUpView(),
   ];
 
   //applciation theme
@@ -106,10 +107,34 @@ class MainController extends ChangeNotifier {
 
       ///填充按钮
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: Colors.indigo,
-          elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return Colors.grey;
+            }
+            return Colors.indigo;
+          }),
+          // 正常 / 禁用 文本色
+          foregroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return Colors.grey.shade300;
+            }
+            return Colors.white;
+          }),
+          // 正常 / 禁用 阴影（elevation）
+          elevation: WidgetStateProperty.resolveWith<double>((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return 0;
+            }
+            return 4;
+          }),
+          // 圆角、内边距
+          shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          ),
+          padding: WidgetStateProperty.all<EdgeInsetsGeometry>(
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          ),
         ),
       ),
 
@@ -218,11 +243,11 @@ class MainController extends ChangeNotifier {
   }
 
   Brightness getBrightnessStart() {
-    // String brightnessString =
-    //     SpUtil.getString('key_brightness', defValue: 'light') ?? 'light';
-    // if (brightnessString == 'light') {
-    //   return Brightness.light;
-    // }
+    String brightnessString =
+        SpUtil.getString('key_brightness', defValue: 'light') ?? 'light';
+    if (brightnessString == 'light') {
+      return Brightness.light;
+    }
     return Brightness.dark;
   }
 }

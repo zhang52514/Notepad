@@ -1,165 +1,181 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart'; // 导入 flutter_webrtc 以使用 DesktopCapturerSource
+import 'dart:typed_data';
 
-/// 一个用于显示可选屏幕/窗口源的对话框。
-/// 用户可以从中选择一个源进行屏幕共享。
+import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:notepad/common/utils/themeUtil.dart';
+
+/// 全局缓存，用于存储首次枚举的缩略图，避免重复调用枚举接口
+final Map<String, Uint8List?> _thumbnailCache = {};
+
+/// 打开屏幕/窗口选择对话框的便捷方法
+Future<DesktopCapturerSource?> showScreenSelectDialog(
+  BuildContext context,
+) async {
+  // 使用 DesktopCapturer 的静态方法枚举源列表
+  final sources = await desktopCapturer.getSources(
+    types: [SourceType.Screen, SourceType.Window],
+    thumbnailSize: ThumbnailSize(320, 240), // 可选：设置缩略图尺寸
+  );
+  // 缓存缩略图
+  for (var src in sources) {
+    _thumbnailCache[src.id] = src.thumbnail;
+  }
+  // 弹出对话框并返回选择结果
+  return showDialog<DesktopCapturerSource>(
+    context: context,
+    builder: (_) => ScreenSelectDialog(sources),
+  );
+}
+
+/// 一个用于显示可选屏幕/窗口源的对话框，UI 经过精致化优化
 class ScreenSelectDialog extends StatefulWidget {
   final List<DesktopCapturerSource> sources;
 
-  const ScreenSelectDialog(this.sources, {Key? key}) : super(key: key);
+  const ScreenSelectDialog(this.sources, {super.key});
 
   @override
   State<ScreenSelectDialog> createState() => _ScreenSelectDialogState();
 }
 
 class _ScreenSelectDialogState extends State<ScreenSelectDialog> {
-  // 当前选中的源
-  DesktopCapturerSource? _selectedSource;
+  DesktopCapturerSource? _selected;
 
   @override
   Widget build(BuildContext context) {
-
-    
     return AlertDialog(
-      title: const Text('选择屏幕共享内容', style: TextStyle(fontWeight: FontWeight.bold)),
-      contentPadding: const EdgeInsets.fromLTRB(20.0, 24.0, 20.0, 0.0), // 调整内容内边距
-      content: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.85, // 宽度稍微增加，容纳更大截图
-        height: MediaQuery.of(context).size.height * 0.7, // 高度增加，显示更多内容
-        child: Column(
-          children: [
-            if (widget.sources.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Text('没有可用的屏幕或窗口源。', style: TextStyle(fontSize: 16)),
-              ),
-            Expanded( // 使用 Expanded 让列表占据剩余空间
-              child: GridView.builder( // 使用 GridView 来并排显示截图
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, // 每行显示2个截图
-                  crossAxisSpacing: 16.0, // 列间距
-                  mainAxisSpacing: 16.0, // 行间距
-                  childAspectRatio: 1.5, // 宽高比，可以根据截图实际比例调整
-                ),
-                itemCount: widget.sources.length,
-                itemBuilder: (context, index) {
-                  final source = widget.sources[index];
-                  final isSelected = _selectedSource == source;
-                  return GestureDetector( // 使用 GestureDetector 替代 ListTile 以便更自由布局
-                    onTap: () {
-                      setState(() {
-                        _selectedSource = source;
-                      });
-                    },
-                    child: AnimatedContainer( // 增加动画效果，选中时有过渡
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.blue.withOpacity(0.15) : Colors.white,
-                        borderRadius: BorderRadius.circular(12.0),
-                        border: Border.all(
-                          color: isSelected ? Colors.blueAccent : Colors.grey.shade300,
-                          width: isSelected ? 3.0 : 1.0,
+      backgroundColor: ThemeUtil.isDarkMode(context) ? null : Color(0xFFE6E6E9),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text(
+        '选择屏幕共享内容',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      content: Container(
+        decoration: BoxDecoration(
+          gradient:
+              ThemeUtil.isDarkMode(context)
+                  ? null
+                  : LinearGradient(
+                    begin: Alignment.topCenter, // 或者 Alignment.topLeft
+                    end: Alignment.bottomCenter, // 或者 Alignment.bottomRight
+                    colors: [
+                      // Color(0xFFDEE4EA), // 浅蓝灰
+                      // Color(0xFFC3CBD6), // 深一点的蓝灰
+                      Color(0xFFE6E6E9), // 开始颜色 灰色
+                      Color(0xFFEAE6DB), // 结束颜色 米色
+                      // Color(0xFFFFF6E5), // 米白
+                      // Color(0xFFE8C8A0), // 浅茶色
+                      // Color(0xFFEDEDED), // 银白
+                      // Color(0xFFD0CCDF), // 浅紫灰
+                    ],
+                  ),
+        ),
+        child: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          height: MediaQuery.of(context).size.height * 0.7,
+          child:
+              widget.sources.isEmpty
+                  ? const Center(
+                    child: Text('没有可用的屏幕或窗口源。', style: TextStyle(fontSize: 16)),
+                  )
+                  : GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 1.3,
                         ),
-                        boxShadow: [
-                          if (isSelected)
-                            BoxShadow(
-                              color: Colors.blueAccent.withOpacity(0.3),
-                              spreadRadius: 2,
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            spreadRadius: 1,
-                            blurRadius: 3,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch, // 让内容横向拉伸
-                        children: [
-                          Expanded( // 截图占据大部分空间
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: ClipRRect( // 圆角裁剪图片
-                                borderRadius: BorderRadius.circular(8.0),
-                                child: source.thumbnail != null // ✅ 再次确认 thumbnail 不为 null
-                                    ? Image.memory(
-                                        source.thumbnail!, // 如果确定非空才使用!
-                                        fit: BoxFit.cover, // 覆盖整个可用空间
-                                        errorBuilder: (context, error, stackTrace) =>
-                                            const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
-                                      )
-                                    : Center( // ✅ 当 thumbnail 为 null 时的替代方案
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              source.type == SourceType.Screen ? Icons.monitor : Icons.window,
-                                              size: 60,
-                                              color: Colors.grey,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            const Text(
-                                              '无预览',
-                                              style: TextStyle(color: Colors.grey, fontSize: 12),
-                                            ),
-                                          ],
+                    itemCount: widget.sources.length,
+                    itemBuilder: (context, i) {
+                      final src = widget.sources[i];
+                      final thumb = _thumbnailCache[src.id];
+                      final isSelected = _selected == src;
+
+                      return Card(
+                        clipBehavior: Clip.antiAlias,
+                        elevation: isSelected ? 8 : 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: InkWell(
+                          onTap: () => setState(() => _selected = src),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child:
+                                    thumb != null
+                                        ? AnimatedOpacity(
+                                          opacity: 1,
+                                          duration: const Duration(
+                                            milliseconds: 300,
+                                          ),
+                                          child: Image.memory(
+                                            thumb,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                        : Center(
+                                          child: Icon(
+                                            src.type == SourceType.Screen
+                                                ? Icons.monitor
+                                                : Icons.window,
+                                            size: 48,
+                                            color: Colors.grey[400],
+                                          ),
                                         ),
-                                      ),
                               ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  source.name ?? '未知来源',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: isSelected ? Colors.blue : Colors.black87,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      src.name,
+                                      style: TextStyle(
+                                        color:
+                                            isSelected
+                                                ? Colors.indigo
+                                                : Colors.grey,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      src.type == SourceType.Screen
+                                          ? '屏幕'
+                                          : '窗口',
+                                      style: TextStyle(
+                                        color:
+                                            isSelected
+                                                ? Colors.indigo
+                                                : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  source.type == SourceType.Screen ? '屏幕' : '窗口',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isSelected ? Colors.blue.shade700 : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+                        ),
+                      );
+                    },
+                  ),
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () {
-            Navigator.of(context).pop(null); // 用户点击取消，返回 null
-          },
+          onPressed: () => Navigator.of(context).pop(null),
           child: const Text('取消'),
         ),
-        ElevatedButton(
-          onPressed: _selectedSource == null // 只有选中了源才能点击确认
-              ? null
-              : () {
-                  Navigator.of(context).pop(_selectedSource); // 返回选中的源
-                },
+        FilledButton(
+          onPressed:
+              _selected == null
+                  ? null
+                  : () => Navigator.of(context).pop(_selected),
           child: const Text('确认共享'),
         ),
       ],

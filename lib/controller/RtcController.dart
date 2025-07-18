@@ -44,7 +44,6 @@ class RtcCallController extends ChangeNotifier {
 
   bool isSwapped = false; // 是否交换了本地和远程视频流
   void setSwapped(bool value) {
-    _log("设置视频流交换状态", "交换状态: $value");
     isSwapped = value;
     notifyListeners();
   }
@@ -143,13 +142,8 @@ class RtcCallController extends ChangeNotifier {
         _log("添加本地摄像头/麦克风轨道", "类型: ${track.kind}, ID: ${track.id}");
       });
 
-      // 启动超时 & 时长
+      // 启动超时
       _startCallTimeout();
-      _callStartTime = DateTime.now();
-      _durationTimer?.cancel();
-      _durationTimer = Timer.periodic(Duration(seconds: 1), (_) {
-        notifyListeners();
-      });
 
       if (isOffer) {
         await createOffer(onSignalSend); // 如果是主叫，创建 Offer
@@ -176,7 +170,10 @@ class RtcCallController extends ChangeNotifier {
         _noResponse = true;
         _log("对方无应答，超时");
         notifyListeners();
-        hangUp();
+
+        Future.delayed(const Duration(seconds: 3), () {
+          hangUp();
+        });
       }
     });
   }
@@ -312,7 +309,16 @@ class RtcCallController extends ChangeNotifier {
       _log("PeerConnection 连接状态变更", state.toString());
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
         _log("✅ PeerConnection 已连接", "通话成功建立！");
-        _callTimeoutTimer?.cancel();
+        _callTimeoutTimer?.cancel(); // 连接成功，取消无应答计时器
+        if (_callStartTime == null) {
+          // 确保只启动一次
+          _callStartTime = DateTime.now();
+          _durationTimer?.cancel(); // 取消可能存在的旧计时器
+          _durationTimer = Timer.periodic(Duration(seconds: 1), (_) {
+            notifyListeners(); // 每秒更新一次UI以显示时长
+          });
+          _log("通话时长计时器已启动");
+        }
       } else if (state ==
               RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
@@ -482,11 +488,15 @@ class RtcCallController extends ChangeNotifier {
     _noResponse = false;
     setSwapped(false);
     // 重置通话时长相关
+
     _callStartTime = null;
     _durationTimer?.cancel();
+    _durationTimer = null;
+    // 清理超时计时器
     _callTimeoutTimer?.cancel();
+    _callTimeoutTimer = null; // 置空
     // 返回到前一个页面（如果可返回）
-    if (main.navigatorKey.currentState?.canPop() ?? false) {
+    while (main.navigatorKey.currentState?.canPop() ?? false) {
       main.navigatorKey.currentState?.pop();
     }
     notifyListeners();
@@ -630,15 +640,8 @@ class RtcCallController extends ChangeNotifier {
     }
 
     try {
-      final sources = await desktopCapturer.getSources(
-        types: [SourceType.Screen, SourceType.Window],
-        thumbnailSize: ThumbnailSize(320, 240), // 设置缩略图大小
-      );
+      final source = await showScreenSelectDialog(main.globalContext);
 
-      final source = await showDialog<DesktopCapturerSource>(
-        context: main.globalContext, // 确保 main.globalContext 可用且正确
-        builder: (_) => ScreenSelectDialog(sources),
-      );
       if (source == null) {
         _log("提示", "未选择任何共享源，取消屏幕共享。");
         return;
@@ -651,8 +654,10 @@ class RtcCallController extends ChangeNotifier {
         <String, dynamic>{
           'audio': false, // 通常屏幕共享不共享系统音频
           'video': {
-            'deviceId': {'exact': source.id}, // 精确匹配用户选择的源ID
-            'mandatory': {'frameRate': 30.0}, // 可以设置帧率
+            'deviceId': {'exact': source.id},
+            'width': {'ideal': 1920},
+            'height': {'ideal': 1080},
+            'frameRate': {'ideal': 60, 'max': 120},
           },
         },
       );

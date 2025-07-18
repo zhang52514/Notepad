@@ -29,6 +29,9 @@ class TitleBarState extends State<TitleBar> {
 
   @override
   Widget build(BuildContext context) {
+    Color btnColor= ThemeUtil.isDarkMode(context)
+        ? Colors.white
+        : Colors.grey.shade800;
     // 监听窗口最大化和还原
     return Scaffold(
       appBar: AppBar(
@@ -48,7 +51,7 @@ class TitleBarState extends State<TitleBar> {
             },
             icon: HugeIcon(
               icon: HugeIcons.strokeRoundedSolidLine01,
-              color: Colors.grey.shade500,
+              color: btnColor,
               size: 16,
             ),
             style: btnStyle,
@@ -62,8 +65,8 @@ class TitleBarState extends State<TitleBar> {
                 },
                 style: btnStyle,
                 icon: HugeIcon(
-                  icon: HugeIcons.strokeRoundedMinimizeScreen,
-                  color: Colors.grey.shade500,
+                  icon: HugeIcons.strokeRoundedChangeScreenMode,
+                  color: btnColor,
                   size: 18,
                 ),
               )
@@ -75,9 +78,9 @@ class TitleBarState extends State<TitleBar> {
                 },
                 style: btnStyle,
                 icon: HugeIcon(
-                  icon: HugeIcons.strokeRoundedMaximizeScreen,
-                  color: Colors.grey.shade500,
-                  size: 18,
+                  icon: HugeIcons.strokeRoundedSquare,
+                  color: btnColor,
+                  size: 16,
                 ),
               ),
           IconButton(
@@ -95,7 +98,7 @@ class TitleBarState extends State<TitleBar> {
                 if (states.contains(WidgetState.hovered)) {
                   return Colors.white;
                 }
-                return null;
+                return btnColor;
               }),
             ),
             icon: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 18),

@@ -4,19 +4,19 @@ import 'package:notepad/controller/MainController.dart';
 import 'package:provider/provider.dart';
 
 
-class SetUpIndex extends StatefulWidget {
-  const SetUpIndex({super.key});
+class SetUpView extends StatefulWidget {
+  const SetUpView({super.key});
 
   @override
-  State<SetUpIndex> createState() => _SetUpIndexState();
+  State<SetUpView> createState() => _SetUpViewState();
 }
 
-class _SetUpIndexState extends State<SetUpIndex> {
+class _SetUpViewState extends State<SetUpView> {
   @override
   Widget build(BuildContext context) {
     var style = Theme.of(context).textTheme.titleLarge;
     var body = Theme.of(context).textTheme.titleSmall;
-    print("SetUpIndex ==============>");
+    print("SetUpView ==============>");
 
     return Consumer<MainController>(
         builder: (BuildContext context, MainController app, Widget? child) {

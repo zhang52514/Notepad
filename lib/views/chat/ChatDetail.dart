@@ -105,9 +105,6 @@ class _ChatDetailState extends State<ChatDetail> {
     // 聊天室为空时显示欢迎页面
     if (ctl.chatRoom == null) return const WelcomePage();
 
-    // 消息为空时显示暂无数据页面
-    if (ctl.getMessagesForRoom().isEmpty) return const NoDataPage();
-
     final ChatRoom room = ctl.chatRoom;
 
     return Scaffold(
@@ -121,11 +118,14 @@ class _ChatDetailState extends State<ChatDetail> {
         actions: [
           IconButton(
             tooltip: "视频通话",
-            onPressed: ctl.rtcCallController.isConnected // 如果已经连接，则禁用发起通话按钮
-                ? null
-                : () {
-                    ctl.sendVideoCallRequest(); // 发起视频通话请求，RtcCallController 会负责显示弹窗
-                  },
+            onPressed:
+                ctl
+                        .rtcCallController
+                        .isConnected // 如果已经连接，则禁用发起通话按钮
+                    ? null
+                    : () {
+                      ctl.sendVideoCallRequest(); // 发起视频通话请求，RtcCallController 会负责显示弹窗
+                    },
             icon: const HugeIcon(
               icon: HugeIcons.strokeRoundedVideo02,
               size: 20,
@@ -165,68 +165,73 @@ class _ChatDetailState extends State<ChatDetail> {
       ),
       body: Stack(
         children: [
-          FlutterListView(
-            reverse: true,
-            controller: ctl.listViewController,
-            delegate: FlutterListViewDelegate((context, index) {
-              final item = displayItems[index];
-              Widget messageWidget = SizedBox.shrink();
-              // 时间标签渲染
-              if (item.data is String) {
-                messageWidget = Center(
-                  child: Container(
-                    margin: EdgeInsets.symmetric(vertical: 10.h),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 8.w,
-                      vertical: 4.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(5.r),
-                    ),
-                    child: Text(
-                      item.data,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isDark ? Colors.white70 : Colors.black54,
+          // 消息为空时显示暂无数据页面
+          displayItems.isEmpty
+              ? const NoDataPage()
+              : FlutterListView(
+                reverse: true,
+                controller: ctl.listViewController,
+                delegate: FlutterListViewDelegate((context, index) {
+                  final item = displayItems[index];
+                  Widget messageWidget = SizedBox.shrink();
+                  // 时间标签渲染
+                  if (item.data is String) {
+                    messageWidget = Center(
+                      child: Container(
+                        margin: EdgeInsets.symmetric(vertical: 10.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8.w,
+                          vertical: 4.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              isDark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(5.r),
+                        ),
+                        child: Text(
+                          item.data,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                );
-              }
+                    );
+                  }
 
-              // 消息渲染
-              if (item.data is ChatMessage) {
-                final ChatMessage msg = item.data;
-                final isMe = msg.senderId == currentUser.id;
-                final sender = ctl.getUser(msg.senderId);
-                final payload = MessagePayload(
-                  name: sender.nickname,
-                  type: msg.type.name,
-                  reverse: !isMe,
-                  avatar: sender.avatarUrl,
-                  content: msg.content,
-                  status: msg.status,
-                  metadata: msg.metadata,
-                  attachments: msg.attachments,
-                  time:
-                      msg.timestamp != null
-                          ? DateUtil.formatTime(msg.timestamp!)
-                          : '',
-                );
-                messageWidget = ChatMessageBubble(
-                  key: ValueKey(msg.messageId),
-                  payload: payload,
-                );
-              }
+                  // 消息渲染
+                  if (item.data is ChatMessage) {
+                    final ChatMessage msg = item.data;
+                    final isMe = msg.senderId == currentUser.id;
+                    final sender = ctl.getUser(msg.senderId);
+                    final payload = MessagePayload(
+                      name: sender.nickname,
+                      type: msg.type.name,
+                      reverse: !isMe,
+                      avatar: sender.avatarUrl,
+                      content: msg.content,
+                      status: msg.status,
+                      metadata: msg.metadata,
+                      attachments: msg.attachments,
+                      time:
+                          msg.timestamp != null
+                              ? DateUtil.formatTime(msg.timestamp!)
+                              : '',
+                    );
+                    messageWidget = ChatMessageBubble(
+                      key: ValueKey(msg.messageId), // 确保每条消息都有唯一的Key
+                      payload: payload,
+                    );
+                  }
 
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: 10.w),
-                child: messageWidget,
-              );
-            }, childCount: displayItems.length),
-          ),
+                  return Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w),
+                    child: messageWidget,
+                  );
+                }, childCount: displayItems.length),
+              ),
 
           // 回到底部按钮（右下角浮动）
           if (!ctl.showScrollToBottom)
