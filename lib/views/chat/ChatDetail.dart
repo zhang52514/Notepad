@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_list_view/flutter_list_view.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:notepad/common/domain/ChatEnumAll.dart';
 
 import 'package:notepad/common/domain/ChatMessage.dart';
 import 'package:notepad/common/domain/ChatRoom.dart';

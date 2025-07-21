@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:notepad/common/module/SingleCloseView.dart';
+import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/controller/AuthController.dart';
 import 'package:provider/provider.dart';
 
@@ -64,18 +65,33 @@ class _AuthLoginState extends State<AuthLogin> {
     return SingleCloseView(
       // 使用Scaffold作为页面根基，方便设置背景色和整体布局
       child: Scaffold(
-        body: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              // 使用动画切换器，让错误提示的出现和消失更平滑
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-                child: _buildLoginForm(context),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient:
+                ThemeUtil.isDarkMode(context)
+                    ? null
+                    : LinearGradient(
+                      begin: Alignment.topCenter, // 或者 Alignment.topLeft
+                      end: Alignment.bottomCenter, // 或者 Alignment.bottomRight
+                      colors: [
+                        Color(0xFFE6E6E9), // 开始颜色
+                        Color(0xFFEAE6DB), // 结束颜色
+                      ],
+                    ),
+          ),
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                // 使用动画切换器，让错误提示的出现和消失更平滑
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  child: _buildLoginForm(context),
+                ),
               ),
             ),
           ),

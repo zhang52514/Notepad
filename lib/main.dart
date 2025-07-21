@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notepad/controller/AuthController.dart';
 import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/controller/MainController.dart';
+import 'package:notepad/controller/NotePadController.dart';
 import 'package:notepad/controller/RtcController.dart';
 import 'package:notepad/core/SimpleFileLogger.dart';
 import 'package:notepad/views/MainNavigatorWidgetWindows.dart';
@@ -93,7 +94,7 @@ void registerAllMessageRenderers() {
 }
 
 class MyApp extends StatelessWidget {
-  MyApp({super.key});
+  const MyApp({super.key});
 
   // This widget is the root of your application.
   @override
@@ -133,6 +134,7 @@ class MyApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProvider<CQController>(create: (ctx) => CQController()),
+        ChangeNotifierProvider<NotePadController>(create: (ctx) => NotePadController()),
       ],
       child: Consumer<MainController>(
         builder: (BuildContext context, MainController appInfo, Widget? child) {

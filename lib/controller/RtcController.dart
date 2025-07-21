@@ -357,14 +357,52 @@ class RtcCallController extends ChangeNotifier {
     }
     try {
       final offer = await _peerConnection!.createOffer();
-      await _peerConnection!.setLocalDescription(offer);
+      // 2. 修改 SDP 内容，优先 H264
+      final modifiedSdp = _preferH264Codec(offer.sdp!);
+      final newOffer = RTCSessionDescription(modifiedSdp, offer.type);
+      await _peerConnection!.setLocalDescription(newOffer);
 
-      _log("Offer 创建成功", "类型: ${offer.type}");
-      await onSignalSend(offer.toMap());
+      _log("Offer 创建成功", "类型: ${newOffer.type}");
+      await onSignalSend(newOffer.toMap());
     } catch (e) {
       _log("❌ 创建Offer失败", e.toString());
-      rethrow;
     }
+  }
+
+  String _preferH264Codec(String sdp) {
+    final lines = sdp.split('\r\n');
+    final mVideoLineIndex = lines.indexWhere(
+      (line) => line.startsWith('m=video'),
+    );
+
+    if (mVideoLineIndex == -1) return sdp;
+
+    // 找出所有 H264 payload type
+    final h264Payloads = <String>[];
+    for (var line in lines) {
+      if (line.startsWith('a=rtpmap') && line.contains('H264')) {
+        final payload = line.split(' ')[0].split(':')[1];
+        h264Payloads.add(payload);
+      }
+    }
+
+    if (h264Payloads.isEmpty) return sdp;
+
+    // 重排 m=video 行
+    final mVideoLine = lines[mVideoLineIndex];
+    final parts = mVideoLine.split(' ');
+    final reordered = <String>[
+      parts[0], // m=
+      parts[1], // video
+      parts[2], // RTP/AVP
+      ...[
+        ...h264Payloads,
+        ...parts.sublist(3).where((p) => !h264Payloads.contains(p)),
+      ],
+    ];
+    lines[mVideoLineIndex] = reordered.join(' ');
+
+    return lines.join('\r\n');
   }
 
   /// 处理收到的 Offer 并创建 Answer (被叫方)
@@ -399,11 +437,15 @@ class RtcCallController extends ChangeNotifier {
     }
     try {
       final answer = await _peerConnection!.createAnswer();
-      await _peerConnection!.setLocalDescription(answer);
 
-      _log("Answer 创建成功", "类型: ${answer.type}");
+      final modifiedSdp = _preferH264Codec(answer.sdp!);
+      final newAnswer = RTCSessionDescription(modifiedSdp, answer.type);
+
+      await _peerConnection!.setLocalDescription(newAnswer);
+
+      _log("Answer 创建成功", "类型: ${newAnswer.type}");
       // _log("Answer SDP", answer.sdp ?? "SDP is null");
-      await onSignalSend(answer.toMap());
+      await onSignalSend(newAnswer.toMap());
     } catch (e) {
       _log("❌ 创建Answer失败", e.toString());
       rethrow;

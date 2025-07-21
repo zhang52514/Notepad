@@ -1,6 +1,7 @@
 import 'package:notepad/common/utils/ColorUtil.dart';
 import 'package:flustars/flustars.dart';
 import 'package:flutter/material.dart';
+import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/views/contact/ContactView.dart';
 import 'package:notepad/views/find/FindView.dart';
 import 'package:notepad/views/chat/HomeIndex.dart';
@@ -8,6 +9,7 @@ import 'package:notepad/views/chat/HomeView.dart';
 import 'package:notepad/views/mine/MineView.dart';
 import 'package:notepad/views/notpad/NotPadView.dart';
 import 'package:notepad/views/setup/SetUpView.dart';
+import 'package:tray_manager/tray_manager.dart';
 
 class MainController extends ChangeNotifier {
   /// Brightness
@@ -47,6 +49,7 @@ class MainController extends ChangeNotifier {
     MineView(),
     SetUpView(),
   ];
+
 
   //applciation theme
   ThemeData appThemeData() {
@@ -211,15 +214,17 @@ class MainController extends ChangeNotifier {
 
       ///输入框
       inputDecorationTheme: InputDecorationTheme(
-        filled: true,
+        isDense: true, // 紧凑模式
+        filled: false,
         // 背景颜色
         hintStyle: const TextStyle(color: ColorUtil.subtitle1),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: const BorderSide(width: 1.0, color: ColorUtil.border1),
+          borderRadius: BorderRadius.circular(4.0),
+          borderSide: const BorderSide(width: 1.0, color: ColorUtil.info),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(4.0),
+          borderSide: const BorderSide(width: 1.0, color: ColorUtil.border1),
         ),
       ),
 
@@ -231,6 +236,14 @@ class MainController extends ChangeNotifier {
           borderRadius: BorderRadius.circular(4), // 设置对话框的圆角
         ),
       ),
+
+      dropdownMenuTheme: DropdownMenuThemeData(
+        textStyle: TextStyle(fontSize: 14),
+          inputDecorationTheme: InputDecorationTheme(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            isDense: true, // 使输入框更紧凑
+          ),
+      )
     );
   }
 

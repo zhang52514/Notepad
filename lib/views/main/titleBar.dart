@@ -38,7 +38,7 @@ class TitleBarState extends State<TitleBar> {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         backgroundColor:
-            ThemeUtil.isDarkMode(context) ? null : Color(0xFFE6E6E9),
+            ThemeUtil.isDarkMode(context) ? Colors.transparent : Color(0xFFE6E6E9),
         title: Text(widget.title, style: TextStyle(fontSize: 14)),
         actions: [
           buildUserInfo(),
@@ -88,7 +88,7 @@ class TitleBarState extends State<TitleBar> {
             padding: EdgeInsets.zero,
             hoverColor: Colors.red,
             onPressed: () {
-              windowManager.close();
+              windowManager.hide();
             },
             style: ButtonStyle(
               shape: WidgetStateProperty.all(
