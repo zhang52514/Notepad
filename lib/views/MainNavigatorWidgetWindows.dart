@@ -89,9 +89,7 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
   }
 
   Future<void> _initTray() async {
-    await trayManager.setIcon(
-      Platform.isWindows ? 'images/favicon.ico' : 'images/tray_icon.png',
-    );
+    await trayManager.setIcon('assets/favicon.ico');
 
     List<MenuItem> items = [
       MenuItem(key: 'show_window', label: '显示窗口'),

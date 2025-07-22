@@ -276,263 +276,318 @@ class _ChatInputBarState extends State<ChatInputBar> {
           null,
           null,
         );
-        return Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color:
-                    ThemeUtil.isDarkMode(context)
-                        ? Colors.grey.shade600
-                        : Colors.grey.shade300,
-              ),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                value.showQuillButtons
-                    ? quillButtons(value.controller)
-                    : SizedBox.shrink(),
-
-                /// quill editor
-                Container(
-                  key: value.editorKey,
-                  constraints: BoxConstraints(maxHeight: 200.h),
-                  child: QuillEditor.basic(
-                    scrollController: value.scrollController,
-                    controller: value.controller,
-                    config: QuillEditorConfig(
-                      textSelectionThemeData: TextSelectionThemeData(
-                        cursorColor:
-                            ThemeUtil.isDarkMode(context)
-                                ? Colors.white
-                                : Colors.indigo,
-                        selectionColor: Colors.blue.withValues(alpha: 0.5),
-                      ),
-
-                      customStyles: DefaultStyles(
-                        leading: listBlockStyle,
-                        link: TextStyle(
-                          fontFamily: 'HarmonyOS',
-                          color: Colors.blue,
-                          decoration: TextDecoration.underline,
-                          fontSize: 14,
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 30,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  !widget.chatController.showScrollToBottom
+                      ? Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: 0.h,
                         ),
-                        lists: listBlockStyle,
-                        paragraph: DefaultTextBlockStyle(
-                          TextStyle(
-                            fontFamily: 'HarmonyOS',
-                            fontSize: 14,
-                            color:
+                        child: IconButton(
+                          tooltip: "回到底部",
+                          onPressed: _scrollToBottomAnimated,
+                          icon: HugeIcon(
+                            icon: HugeIcons.strokeRoundedArrowDown01,
+                            size: 20, // 设置图标尺寸
+                          ),
+                          padding: EdgeInsets.all(4), // 缩小点击区域 padding
+                          constraints: BoxConstraints(), // 去除默认最小约束
+                        ),
+                      )
+                      : SizedBox.shrink(),
+                ],
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(
+                left: 12.w,
+                right: 12.w,
+                bottom: 16.h,
+                top: 4,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color:
+                        ThemeUtil.isDarkMode(context)
+                            ? Colors.grey.shade600
+                            : Colors.grey.shade300,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    value.showQuillButtons
+                        ? quillButtons(value.controller)
+                        : SizedBox.shrink(),
+
+                    /// quill editor
+                    Container(
+                      key: value.editorKey,
+                      constraints: BoxConstraints(maxHeight: 200.h),
+                      child: QuillEditor.basic(
+                        scrollController: value.scrollController,
+                        controller: value.controller,
+                        config: QuillEditorConfig(
+                          textSelectionThemeData: TextSelectionThemeData(
+                            cursorColor:
                                 ThemeUtil.isDarkMode(context)
                                     ? Colors.white
-                                    : Colors.black,
+                                    : Colors.indigo,
+                            selectionColor: Colors.blue.withValues(alpha: 0.5),
                           ),
-                          HorizontalSpacing(0, 0),
-                          VerticalSpacing.zero,
-                          VerticalSpacing.zero,
-                          null,
-                        ),
-                        placeHolder: DefaultTextBlockStyle(
-                          TextStyle(fontSize: 14, color: Colors.grey),
-                          HorizontalSpacing(0, 0),
-                          VerticalSpacing(0, 0),
-                          VerticalSpacing(0, 0),
-                          null,
+
+                          customStyles: DefaultStyles(
+                            leading: listBlockStyle,
+                            link: TextStyle(
+                              fontFamily: 'HarmonyOS',
+                              color: Colors.blue,
+                              decoration: TextDecoration.underline,
+                              fontSize: 14,
+                            ),
+                            lists: listBlockStyle,
+                            paragraph: DefaultTextBlockStyle(
+                              TextStyle(
+                                fontFamily: 'HarmonyOS',
+                                fontSize: 14,
+                                color:
+                                    ThemeUtil.isDarkMode(context)
+                                        ? Colors.white
+                                        : Colors.black,
+                              ),
+                              HorizontalSpacing(0, 0),
+                              VerticalSpacing.zero,
+                              VerticalSpacing.zero,
+                              null,
+                            ),
+                            placeHolder: DefaultTextBlockStyle(
+                              TextStyle(fontSize: 14, color: Colors.grey),
+                              HorizontalSpacing(0, 0),
+                              VerticalSpacing(0, 0),
+                              VerticalSpacing(0, 0),
+                              null,
+                            ),
+                          ),
+                          scrollBottomInset: 10,
+                          scrollable: true,
+                          placeholder: "输入消息",
+                          autoFocus: true,
+                          padding: const EdgeInsets.all(8),
+                          embedBuilders: [
+                            ImageBuilder(),
+                            AtBuilder(),
+                            FileBuilder(controller: value.controller),
+                          ],
                         ),
                       ),
-                      scrollBottomInset: 10,
-                      scrollable: true,
-                      placeholder: "输入消息",
-                      autoFocus: true,
-                      padding: const EdgeInsets.all(8),
-                      embedBuilders: [
-                        ImageBuilder(),
-                        AtBuilder(),
-                        FileBuilder(controller: value.controller),
-                      ],
                     ),
-                  ),
-                ),
 
-                /// toolbar
-                Container(
-                  height: 30.h,
-                  padding: EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Builder(
-                        builder: (context) {
-                          return IconButton(
-                            tooltip: "表情及符号",
-                            padding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                            onPressed: () {
-                              close = AnoToast.showWidget(
-                                context,
-                                direction: PreferDirection.topCenter,
-                                child: ChatEmojiWidget(
-                                  cqController: value,
-                                  closeSelected: () {
-                                    close?.call();
-                                  },
+                    /// toolbar
+                    Container(
+                      height: 30.h,
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Builder(
+                            builder: (context) {
+                              return IconButton(
+                                tooltip: "表情及符号",
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () {
+                                  close = AnoToast.showWidget(
+                                    context,
+                                    direction: PreferDirection.topCenter,
+                                    child: ChatEmojiWidget(
+                                      cqController: value,
+                                      closeSelected: () {
+                                        close?.call();
+                                      },
+                                    ),
+                                  );
+                                },
+                                icon: HugeIcon(
+                                  icon: HugeIcons.strokeRoundedRelieved02,
+                                  size: 18,
                                 ),
                               );
                             },
+                          ),
+                          IconButton(
+                            tooltip: "图片",
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () async {
+                              if (_isPicking) return; // 阻止多次点击
+                              setState(() => _isPicking = true);
+                              try {
+                                FilePickerResult? result = await FilePicker
+                                    .platform
+                                    .pickFiles(
+                                      allowMultiple: true,
+                                      type: FileType.custom,
+                                      allowedExtensions: [
+                                        'jpg',
+                                        'jpeg',
+                                        'png',
+                                        'gif',
+                                        'bmp',
+                                        'webp',
+                                      ],
+                                    );
+                                if (result != null) {
+                                  List<File> files =
+                                      result.paths
+                                          .map((path) => File(path!))
+                                          .toList();
+                                  for (var file in files) {
+                                    final filePath = file.path;
+                                    final String fileName = p.basename(
+                                      filePath,
+                                    );
+                                    final int fileSize = file.lengthSync();
+
+                                    final String? mimeType = lookupMimeType(
+                                      filePath,
+                                    );
+                                    // 如果无法识别，可以给一个默认值
+                                    final String fileType =
+                                        mimeType ?? 'application/octet-stream';
+                                    value.insertEmbedAtCursor("image", {
+                                      "url": filePath,
+                                      "name": fileName,
+                                      "type": fileType,
+                                      "size": fileSize,
+                                    });
+                                  }
+                                }
+                              } catch (e) {
+                                print("选择图片失败: $e");
+                              } finally {
+                                setState(() => _isPicking = false);
+                              }
+                            },
                             icon: HugeIcon(
-                              icon: HugeIcons.strokeRoundedRelieved02,
+                              icon: HugeIcons.strokeRoundedImage02,
                               size: 18,
                             ),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        tooltip: "图片",
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () async {
-                          if (_isPicking) return; // 阻止多次点击
-                          setState(() => _isPicking = true);
-                          try {
-                            FilePickerResult? result = await FilePicker.platform
-                                .pickFiles(
-                                  allowMultiple: true,
-                                  type: FileType.custom,
-                                  allowedExtensions: [
-                                    'jpg',
-                                    'jpeg',
-                                    'png',
-                                    'gif',
-                                    'bmp',
-                                    'webp',
-                                  ],
-                                );
-                            if (result != null) {
-                              List<File> files =
-                                  result.paths
-                                      .map((path) => File(path!))
-                                      .toList();
-                              for (var file in files) {
-                                final filePath = file.path;
-                                final String fileName = p.basename(filePath);
-                                final int fileSize = file.lengthSync();
+                          ),
+                          IconButton(
+                            tooltip: "文件",
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () async {
+                              if (_isPicking) return; // 阻止多次点击
+                              setState(() => _isPicking = true);
+                              try {
+                                FilePickerResult? result = await FilePicker
+                                    .platform
+                                    .pickFiles(allowMultiple: true);
+                                if (result != null) {
+                                  List<File> files =
+                                      result.paths
+                                          .map((path) => File(path!))
+                                          .toList();
+                                  for (var file in files) {
+                                    final filePath = file.path;
+                                    final String fileName = p.basename(
+                                      filePath,
+                                    );
+                                    final int fileSize = file.lengthSync();
 
-                                final String? mimeType = lookupMimeType(
-                                  filePath,
-                                );
-                                // 如果无法识别，可以给一个默认值
-                                final String fileType =
-                                    mimeType ?? 'application/octet-stream';
-                                value.insertEmbedAtCursor("image", {
-                                  "url": filePath,
-                                  "name": fileName,
-                                  "type": fileType,
-                                  "size": fileSize,
-                                });
+                                    final String? mimeType = lookupMimeType(
+                                      filePath,
+                                    );
+                                    // 如果无法识别，可以给一个默认值
+                                    final String fileType =
+                                        mimeType ?? 'application/octet-stream';
+                                    value.insertEmbedAtCursor("file", {
+                                      "url": filePath,
+                                      "name": fileName,
+                                      "type": fileType,
+                                      "size": fileSize,
+                                    });
+                                  }
+                                }
+                              } catch (e) {
+                                print("选择图片失败: $e");
+                              } finally {
+                                setState(() => _isPicking = false);
                               }
-                            }
-                          } catch (e) {
-                            print("选择图片失败: $e");
-                          } finally {
-                            setState(() => _isPicking = false);
-                          }
-                        },
-                        icon: HugeIcon(
-                          icon: HugeIcons.strokeRoundedImage02,
-                          size: 18,
-                        ),
+                            },
+                            icon: HugeIcon(
+                              icon: HugeIcons.strokeRoundedFiles02,
+                              size: 18,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: "更多格式",
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => value.setQuillButtons(),
+                            icon: HugeIcon(
+                              icon: HugeIcons.strokeRoundedAdd01,
+                              size: 18,
+                            ),
+                          ),
+                          VerticalDivider(),
+                          IconButton(
+                            tooltip: "发送",
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () {
+                              // final String json = jsonEncode(
+                              //   value.controller.document.toDelta().toJson(),
+                              // );
+                              widget.chatController.sendMessage(
+                                value.parseDeltaToMessage(
+                                  widget.chatController,
+                                ),
+                              );
+                              value.controller.replaceText(
+                                0,
+                                value.controller.document.length - 1,
+                                '',
+                                const TextSelection.collapsed(offset: 0),
+                              );
+                            },
+                            icon: HugeIcon(
+                              icon: HugeIcons.strokeRoundedSent,
+                              size: 18,
+                            ),
+                          ),
+                          SizedBox(width: 5.w),
+                        ],
                       ),
-                      IconButton(
-                        tooltip: "文件",
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () async {
-                          if (_isPicking) return; // 阻止多次点击
-                          setState(() => _isPicking = true);
-                          try {
-                            FilePickerResult? result = await FilePicker.platform
-                                .pickFiles(allowMultiple: true);
-                            if (result != null) {
-                              List<File> files =
-                                  result.paths
-                                      .map((path) => File(path!))
-                                      .toList();
-                              for (var file in files) {
-                                final filePath = file.path;
-                                final String fileName = p.basename(filePath);
-                                final int fileSize = file.lengthSync();
-
-                                final String? mimeType = lookupMimeType(
-                                  filePath,
-                                );
-                                // 如果无法识别，可以给一个默认值
-                                final String fileType =
-                                    mimeType ?? 'application/octet-stream';
-                                value.insertEmbedAtCursor("file", {
-                                  "url": filePath,
-                                  "name": fileName,
-                                  "type": fileType,
-                                  "size": fileSize,
-                                });
-                              }
-                            }
-                          } catch (e) {
-                            print("选择图片失败: $e");
-                          } finally {
-                            setState(() => _isPicking = false);
-                          }
-                        },
-                        icon: HugeIcon(
-                          icon: HugeIcons.strokeRoundedFiles02,
-                          size: 18,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: "更多格式",
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => value.setQuillButtons(),
-                        icon: HugeIcon(
-                          icon: HugeIcons.strokeRoundedAdd01,
-                          size: 18,
-                        ),
-                      ),
-                      VerticalDivider(),
-                      IconButton(
-                        tooltip: "发送",
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () {
-                          // final String json = jsonEncode(
-                          //   value.controller.document.toDelta().toJson(),
-                          // );
-                          widget.chatController.sendMessage(
-                            value.parseDeltaToMessage(widget.chatController),
-                          );
-                          value.controller.replaceText(
-                            0,
-                            value.controller.document.length - 1,
-                            '',
-                            const TextSelection.collapsed(offset: 0),
-                          );
-                        },
-                        icon: HugeIcon(
-                          icon: HugeIcons.strokeRoundedSent,
-                          size: 18,
-                        ),
-                      ),
-                      SizedBox(width: 5.w),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         );
       },
     );
+  }
+
+  void _scrollToBottomAnimated() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.chatController.listViewController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 }

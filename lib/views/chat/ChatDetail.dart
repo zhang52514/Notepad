@@ -232,39 +232,14 @@ class _ChatDetailState extends State<ChatDetail> {
                 }, childCount: displayItems.length),
               ),
 
-          // 回到底部按钮（右下角浮动）
-          if (!ctl.showScrollToBottom)
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Padding(
-                padding: EdgeInsets.only(right: 5.w, bottom: 2.h), // 距离底部的位置
-                child: IconButton(
-                  tooltip: "回到底部",
-                  onPressed: _scrollToBottomAnimated,
-                  icon: HugeIcon(
-                    icon: HugeIcons.strokeRoundedArrowDown01,
-                    size: 18, // 设置图标尺寸
-                  ),
-                  padding: EdgeInsets.all(4), // 缩小点击区域 padding
-                  constraints: BoxConstraints(), // 去除默认最小约束
-                ),
-              ),
-            ),
+          
         ],
       ),
       bottomNavigationBar: ChatInputBar(chatController: ctl),
     );
   }
 
-  void _scrollToBottomAnimated() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      widget.chatController.listViewController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    });
-  }
+
 
   /// 滚动可见区域变化处理（节流控制，避免频繁触发）
   void _onVisibleItemChanged() {
