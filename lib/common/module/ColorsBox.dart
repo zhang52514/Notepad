@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:notepad/common/utils/ThemeUtil.dart';
 
 class ColorsBox {
-  static Widget buildColorsWidget(
-    Function? onTap,
-    Color? color,
-  ) {
+  static Widget buildColorsWidget(Function? onTap, BuildContext context) {
     final List<Color> colors = [
       // 第一行
       Colors.black,
@@ -92,40 +90,79 @@ class ColorsBox {
     ];
     return Material(
       type: MaterialType.card,
-      elevation: 4,
-      color: color,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 6,
+      color:
+          ThemeUtil.isDarkMode(context) ? Colors.grey.shade800 : Colors.white,
       child: SizedBox(
-        width: 240,
-        height: 200,
+        width: 280,
+        height: 250,
         child: Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: Wrap(
-            spacing: 2, // 控制颜色块之间的水平间距
-            runSpacing: 5, // 控制颜色块之间的垂直间距
-            children:
-                colors.map((color) {
-                  return MouseRegion(
-                    cursor: SystemMouseCursors.click, // 鼠标悬浮变成小手
-                    child: GestureDetector(
-                      onTap: () {
-                        var hex = colorToHex(color);
-                        hex = '#$hex';
-                        if (onTap != null) {
-                          onTap(hex);
-                        }
-                      },
-                      child: Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300, width: 1),
-                          color: color,
-                          borderRadius: BorderRadius.circular(8),
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            children: [
+              // 重置颜色按钮
+              GestureDetector(
+                onTap: () {
+                  if (onTap != null) {
+                    onTap(null);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.indigo,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    '重置',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 10, // 每行10个颜色，与你的原始数据一致
+                    crossAxisSpacing: 8, // 水平间距
+                    mainAxisSpacing: 8, // 垂直间距
+                  ),
+                  itemCount: colors.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return MouseRegion(
+                      cursor: SystemMouseCursors.click, // 鼠标悬浮变成小手
+                      child: GestureDetector(
+                        onTap: () {
+                          var hex = colorToHex(colors[index]);
+                          hex = '#$hex';
+                          if (onTap != null) {
+                            onTap(hex);
+                          }
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colors[index],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color:
+                                  ThemeUtil.isDarkMode(context)
+                                      ? Colors.grey.shade700
+                                      : Colors.grey.shade300,
+                              width: 1,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),

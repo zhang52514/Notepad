@@ -129,7 +129,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     child: ColorsBox.buildColorsWidget((hex) {
                       controller.formatSelection(ColorAttribute(hex));
                       onCancel?.call();
-                    }, color),
+                    }, context),
                   );
                 },
                 icon: HugeIcon(
@@ -152,7 +152,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     child: ColorsBox.buildColorsWidget((hex) {
                       controller.formatSelection(BackgroundAttribute(hex));
                       onCancel?.call();
-                    }, color),
+                    }, context),
                   );
                 },
                 icon: HugeIcon(

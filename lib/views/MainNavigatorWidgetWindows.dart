@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
@@ -89,8 +88,9 @@ class _MainNavigatorWidgetWindowsState extends State<MainNavigatorWidgetWindows>
   }
 
   Future<void> _initTray() async {
-    await trayManager.setIcon('assets/favicon.ico');
-
+    await trayManager.setIcon('assets/app_icon.ico');
+    await trayManager.setToolTip("Anoxia");
+    
     List<MenuItem> items = [
       MenuItem(key: 'show_window', label: '显示窗口'),
       MenuItem(key: 'hide_window', label: '隐藏窗口'),

@@ -88,7 +88,7 @@ class _LeftTreeViewState extends State<LeftTreeView> {
                   if (draggedNode.parent != null) {
                     draggedNode.parent!.children.remove(draggedNode);
                   } else {
-                    roots.remove(draggedNode); // ✅ 如果原来是根节点，要从 roots 移除
+                    roots.remove(draggedNode); //  如果原来是根节点，要从 roots 移除
                   }
 
                   // 3. 设置新父节点

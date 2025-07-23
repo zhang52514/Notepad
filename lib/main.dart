@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:notepad/common/utils/DBHelperUtil.dart';
 import 'package:notepad/controller/AuthController.dart';
 import 'package:notepad/controller/ChatController.dart';
 import 'package:notepad/controller/MainController.dart';
@@ -34,6 +35,7 @@ BuildContext get globalContext => navigatorKey.currentContext!;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SimpleFileLogger.initialize(); // 初始化日志记录器
+   await DBHelperUtil().initDatabase();
   await SpUtil.getInstance();
   registerAllMessageRenderers();
 
@@ -43,6 +45,7 @@ Future<void> main() async {
   ///窗体设置
   WindowOptions windowOptions = WindowOptions(
     size: Size(1200, 800),
+    minimumSize: Size(800, 600),
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,

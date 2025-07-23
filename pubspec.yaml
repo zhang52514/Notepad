@@ -74,6 +74,8 @@ dependencies:
   flutter_fancy_tree_view: ^1.6.0
   #拆分器视图插件
   split_view: ^3.2.1
+  #sqllite
+  sqlite3: ^2.7.7
 
 dev_dependencies:
   flutter_test:

@@ -1,3 +1,26 @@
 {
-  "dart.flutterSdkPath": ".fvm/versions/stable"
+  "dart.flutterSdkPath": ".fvm/versions/stable",
+  "sqltools.connections": [
+    {
+      "mysqlOptions": {
+        "authProtocol": "default",
+        "enableSsl": "Disabled"
+      },
+      "previewLimit": 50,
+      "server": "anoxia.cn",
+      "port": 3306,
+      "driver": "MySQL",
+      "name": "RN",
+      "database": "chat_db",
+      "username": "root",
+      "password": "2023@Zjn"
+    },
+    {
+      "previewLimit": 50,
+      "driver": "SQLite",
+      "database": "${workspaceFolder:Notepad}/db/notepad.db",
+      "name": "root"
+    }
+  ],
+  "sqltools.useNodeRuntime": true
 }

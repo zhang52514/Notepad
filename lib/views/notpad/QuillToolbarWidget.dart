@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:notepad/common/module/AnoToast.dart';
+import 'package:notepad/common/module/ColorsBox.dart';
 
 // --- 新增的工具栏组件 ---
 class MyQuillToolbar extends StatefulWidget {
   final QuillController controller;
-  final bool split;
 
-  const MyQuillToolbar({super.key, required this.controller, this.split =false});
+  const MyQuillToolbar({super.key, required this.controller});
 
   @override
   State<MyQuillToolbar> createState() => _MyQuillToolbarState();
@@ -52,7 +53,7 @@ class _MyQuillToolbarState extends State<MyQuillToolbar> {
     );
 
     return Wrap(
-      direction: Axis.vertical,
+      direction: Axis.horizontal,
       children: [
         // 撤销/重做
         QuillToolbarHistoryButton(
@@ -147,25 +148,49 @@ class _MyQuillToolbarState extends State<MyQuillToolbar> {
           controller: controller,
         ),
         // 颜色选择
-        QuillToolbarColorButton(
-          options: QuillToolbarColorButtonOptions(
-            tooltip: '文字颜色',
-            iconSize: 12,
-            iconTheme: quillIconTheme,
-            customOnPressedCallback: (ctl, isBg) async {},
-          ),
-          controller: controller,
-          isBackground: false,
+        Builder(
+          builder:
+              (context) => QuillToolbarColorButton(
+                options: QuillToolbarColorButtonOptions(
+                  tooltip: '文字颜色',
+                  iconSize: 12,
+                  iconTheme: quillIconTheme,
+                  customOnPressedCallback: (ctl, isBg) async {
+                    Function? onCancel;
+                    onCancel = AnoToast.showWidget(
+                      context,
+                      child: ColorsBox.buildColorsWidget((hex) {
+                        ctl.formatSelection(ColorAttribute(hex));
+                        onCancel?.call();
+                      }, context),
+                    );
+                  },
+                ),
+                controller: controller,
+                isBackground: false,
+              ),
         ),
-        QuillToolbarColorButton(
-          options: QuillToolbarColorButtonOptions(
-            tooltip: '背景颜色',
-            iconSize: 12,
-            iconTheme: quillIconTheme,
-            customOnPressedCallback: (ctl, isBg) async {},
-          ),
-          controller: controller,
-          isBackground: true,
+        Builder(
+          builder:
+              (context) => QuillToolbarColorButton(
+                options: QuillToolbarColorButtonOptions(
+                  tooltip: '背景颜色',
+                  iconSize: 12,
+                  iconTheme: quillIconTheme,
+                  customOnPressedCallback: (ctl, isBg) async {
+                    Function? onCancel;
+                    onCancel = AnoToast.showWidget(
+                      context,
+                      child: ColorsBox.buildColorsWidget((hex) {
+                        ctl.formatSelection(BackgroundAttribute(hex));
+                        onCancel?.call();
+                      }, context),
+                    );
+                  },
+                ),
+                controller: controller,
+                isBackground: true,
+              ),
         ),
         // 对齐方式
         QuillToolbarToggleStyleButton(
@@ -195,7 +220,7 @@ class _MyQuillToolbarState extends State<MyQuillToolbar> {
           controller: controller,
           attribute: Attribute.rightAlignment,
         ),
-        buildHeaderButton(tooltip: '', attr: Attribute.header),
+        buildHeaderButton(tooltip: 'H0', attr: Attribute.header),
         buildHeaderButton(tooltip: 'H1', attr: Attribute.h1),
         buildHeaderButton(tooltip: 'H2', attr: Attribute.h2),
         buildHeaderButton(tooltip: 'H3', attr: Attribute.h3),

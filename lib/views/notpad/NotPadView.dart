@@ -23,7 +23,7 @@ class _NotPadViewState extends State<NotPadView> {
           viewMode: SplitViewMode.Horizontal,
           gripColor: Colors.grey,
           gripColorActive: Colors.blueGrey,
-          gripSize: 4,
+          gripSize: 1,
           controller: SplitViewController(
             weights: [0.2, 0.8],
             limits: [WeightLimit(min: 0.2), WeightLimit(min: 0.4)],
@@ -31,23 +31,36 @@ class _NotPadViewState extends State<NotPadView> {
           children: [
             // 左侧面板：文件树
             LeftTreeView(),
-            Row(
+            Column(
               children: [
+                Row(
+                  children: [
+                    SizedBox(width: 4.w,),
+                    Text(
+                      "Title Notepad",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Divider(),
                 MyQuillToolbar(controller: value.controller),
+                Divider(),
                 SizedBox(height: 10.h),
                 Expanded(
                   child: FractionallySizedBox(
-                    widthFactor: 0.8,
                     child: SizedBox(
                       height: double.infinity,
                       child: QuillEditor.basic(
                         controller: value.controller,
                         config: QuillEditorConfig(
                           textSelectionThemeData: TextSelectionThemeData(
-                            cursorColor: Theme.of(context).primaryColor,
+                            cursorColor: Colors.indigo,
                             selectionColor: Colors.grey.withValues(alpha: 0.5),
                           ),
-                          placeholder: "Do you want to write something",
+                          placeholder: "记录每一刻灵感",
                           autoFocus: true,
                           padding: const EdgeInsets.all(10),
                         ),
