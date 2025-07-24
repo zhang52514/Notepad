@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/config/application.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/controller/MainController.dart';
 
@@ -42,7 +43,12 @@ class _SidebarState extends State<Sidebar> {
         children: [
           const SizedBox(height: 16),
           // Teams 图标位置
-          HugeIcon(icon: HugeIcons.strokeRoundedChatting01,color: Colors.indigo),
+          IconButton(
+            onPressed: () {
+
+            },
+            icon: Application.getAppLogo(width: 24, height: 24),
+          ),
           const SizedBox(height: 8),
           Expanded(
             child: ListView(

@@ -24,7 +24,7 @@ class _HomeViewState extends State<HomeView> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(
-                width: 95.w,
+                width: 90.w,
                 height: double.infinity,
                 child: ChatList(value: value),
               ),

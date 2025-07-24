@@ -35,7 +35,6 @@ BuildContext get globalContext => navigatorKey.currentContext!;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SimpleFileLogger.initialize(); // 初始化日志记录器
-   await DBHelperUtil().initDatabase();
   await SpUtil.getInstance();
   registerAllMessageRenderers();
 

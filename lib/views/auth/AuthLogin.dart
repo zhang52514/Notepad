@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/config/application.dart';
 import 'package:notepad/common/module/SingleCloseView.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
 import 'package:notepad/controller/AuthController.dart';
@@ -137,7 +138,7 @@ class _AuthLoginState extends State<AuthLogin> {
     return Column(
       children: [
         // 使用更贴合主题的图标
-        HugeIcon(icon: HugeIcons.strokeRoundedNotebook, size: 56),
+        Application.getAppLogo(width: 56,height: 56),
         const SizedBox(height: 16),
         Text(
           "欢迎回来",

@@ -3,48 +3,42 @@ import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
 class DBHelperUtil {
-  // 静态实例，实现单例模式
   static final DBHelperUtil _instance = DBHelperUtil._internal();
   factory DBHelperUtil() => _instance;
 
-  // 私有构造函数
   DBHelperUtil._internal();
 
-  // 数据库连接实例
-  late Database _db;
+  // 使用一个私有的 Future 来管理数据库的初始化状态
+  Future<Database>? _dbFuture;
 
-  // 数据库路径和名称
   final String _dbName = 'notepad.db';
 
-  /// 初始化并打开数据库
-  Future<void> initDatabase() async {
-    // 获取应用的数据目录，Windows 上一般在 `C:\Users\用户名\AppData\Local\你的应用名`
-    // 如果没有，可以自己指定一个目录，例如在当前工作目录
-    final String dbPath = p.join(
-      Directory.current.path,
-      'db', // 在当前目录下创建一个 db 文件夹
-      _dbName,
-    );
-    
-    // 确保数据库目录存在
+  // 优化过的数据库 getter
+  // 它会确保 _dbFuture 已经完成，返回一个可用的数据库实例
+  Future<Database> get _database async {
+    // 如果 _dbFuture 为空，说明还没开始初始化，则进行初始化
+    _dbFuture ??= _initDatabase();
+    return _dbFuture!;
+  }
+
+  // 封装初始化逻辑，返回一个 Future<Database>
+  Future<Database> _initDatabase() async {
+    final String dbPath = p.join(Directory.current.path, 'db', _dbName);
+
     final Directory dbDir = Directory(p.dirname(dbPath));
     if (!await dbDir.exists()) {
       await dbDir.create(recursive: true);
     }
 
-    // 打开数据库
-    _db = sqlite3.open(dbPath);
-
-    // 检查并创建表，如果表不存在的话
-    _createTables();
+    final Database db = sqlite3.open(dbPath);
+    _createTables(db);
     print('数据库已成功打开，路径: $dbPath');
+    return db;
   }
 
-  /// 创建数据表
-  void _createTables() {
-    // 这里放你的建表语句
-    _db.execute('''
-	  CREATE TABLE IF NOT EXISTS nodes (
+  Future<void> _createTables(Database db) async {
+    db.execute('''
+      CREATE TABLE IF NOT EXISTS nodes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         type TEXT NOT NULL, -- 'folder' or 'note'
@@ -52,28 +46,64 @@ class DBHelperUtil {
         content TEXT, -- only used for 'note' type
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-		    level integer NOT NULL,
+        level integer NOT NULL,
         sort integer,
         FOREIGN KEY (parent_id) REFERENCES nodes (id) ON DELETE CASCADE
       );
     ''');
+
+    // 检查根节点是否存在
+    final ResultSet result = db.select(
+      'SELECT COUNT(*) AS count FROM nodes WHERE parent_id IS NULL AND type = ?',
+      ['folder'],
+    );
+    final int count = result.first['count'] as int;
+
+    if (count == 0) {
+      // 如果不存在，则插入默认根节点
+      final now = DateTime.now().toIso8601String();
+      db.execute(
+        '''
+        INSERT INTO nodes (name, type, parent_id, content, created_at, updated_at, level, sort)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+        [
+          '我的笔记', // 根节点名称
+          'folder', // 类型为文件夹
+          null, // 根节点没有父ID
+          null, // 文件夹没有内容
+          now,
+          now,
+          0, // 根节点层级为0
+          0, // 排序
+        ],
+      );
+      print('已插入默认根节点。');
+    }
   }
-  
-  /// 获取数据库连接实例
-  Database get database => _db;
 
   /// 执行 SQL 查询
-  ResultSet select(String sql, [List<Object?> parameters = const []]) {
-    return _db.select(sql, parameters);
+  Future<ResultSet> select(
+    String sql, [
+    List<Object?> parameters = const [],
+  ]) async {
+    final db = await _database;
+    return db.select(sql, parameters);
   }
 
   /// 执行 SQL 语句 (插入, 更新, 删除, 事务等)
-  void execute(String sql, [List<Object?> parameters = const []]) {
-    _db.execute(sql, parameters);
+  Future<void> execute(
+    String sql, [
+    List<Object?> parameters = const [],
+  ]) async {
+    final db = await _database;
+    db.execute(sql, parameters);
   }
 
   /// 关闭数据库连接
-  void close() {
-    _db.dispose();
+  Future<void> close() async {
+    final db = await _database;
+    db.dispose();
+    _dbFuture = null; // 重置 Future，以便下次可以重新初始化
   }
 }

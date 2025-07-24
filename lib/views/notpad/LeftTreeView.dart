@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_fancy_tree_view/flutter_fancy_tree_view.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:notepad/common/domain/NoteTreeNode.dart';
+import 'package:notepad/common/module/LoadingWithText.dart';
 import 'package:notepad/common/utils/ThemeUtil.dart';
+import 'package:notepad/controller/NotePadController.dart';
 import 'package:notepad/views/notpad/RightClickTreeMenu.dart';
+import 'package:provider/provider.dart';
 
 class LeftTreeView extends StatefulWidget {
   const LeftTreeView({super.key});
@@ -13,34 +17,29 @@ class LeftTreeView extends StatefulWidget {
 }
 
 class _LeftTreeViewState extends State<LeftTreeView> {
-  late final List<NoteTreeNode> roots;
-  late final TreeController<NoteTreeNode> treeController;
+  List<NoteTreeNode> roots = [];
+  late TreeController<NoteTreeNode> treeController;
 
   @override
   void initState() {
     super.initState();
+    _initTreeData();
+  }
 
-    roots = [
-      NoteTreeNode(
-        title: 'Root 1',
-        content: 'Content 1',
-        children: [
-          NoteTreeNode(title: 'Child 1-1', content: 'Content 1-1'),
-          NoteTreeNode(title: 'Child 1-2', content: 'Content 1-2'),
-        ],
-      ),
-      NoteTreeNode(
-        title: 'Root 2',
-        content: 'Content 2',
-        children: [NoteTreeNode(title: 'Child 2-1', content: 'Content 2-1')],
-      ),
-    ];
+  Future<void> _initTreeData() async {
+    roots =
+        await Provider.of<NotePadController>(
+          context,
+          listen: false,
+        ).fetchTreeNodes();
 
     treeController = TreeController<NoteTreeNode>(
       roots: roots,
       childrenProvider: (node) => node.children,
       parentProvider: (node) => node.parent,
     );
+
+    setState(() {});
   }
 
   bool _isDescendant(NoteTreeNode parent, NoteTreeNode potentialChild) {
@@ -53,6 +52,9 @@ class _LeftTreeViewState extends State<LeftTreeView> {
 
   @override
   Widget build(BuildContext context) {
+    if (roots.isEmpty) {
+      return const Center(child: LoadingWithText());
+    }
     return Column(
       children: [
         Container(
@@ -107,13 +109,13 @@ class _LeftTreeViewState extends State<LeftTreeView> {
                   Widget myTreeNodeTile = ListTile(
                     dense: true,
                     leading:
-                        entry.node.children.isEmpty
+                        entry.node.type != 'folder'
                             ? HugeIcon(
                               icon: HugeIcons.strokeRoundedNote01,
                               color: Colors.indigo,
                             )
                             : Icon(Icons.folder, color: Colors.amber.shade700),
-                    title: Text(entry.node.title),
+                    title: Text(entry.node.name),
                     trailing:
                         entry.node.children.isEmpty
                             ? null
@@ -140,15 +142,14 @@ class _LeftTreeViewState extends State<LeftTreeView> {
                       node: entry.node,
                       roots: roots,
                       controller: treeController,
-                      getTitle: (node) => node.title,
-                      createNode:
-                          () => NoteTreeNode(title: '新节点', content: '新内容'),
+                      getTitle: (node) => node.name,
+                      createNode: null,
                       addChild: (newNode, parent) {
                         newNode.parent = parent;
                         parent.children.add(newNode);
                       },
                       onDeleted: (node) {
-                        debugPrint("已删除节点：${node.title}");
+                        debugPrint("已删除节点：${node.name}");
                       },
                       child: InkWell(
                         onTap: () => treeController.toggleExpansion(entry.node),
@@ -166,22 +167,5 @@ class _LeftTreeViewState extends State<LeftTreeView> {
         ),
       ],
     );
-  }
-}
-
-class NoteTreeNode {
-  final String title;
-  final String content;
-  final List<NoteTreeNode> children;
-  NoteTreeNode? parent;
-
-  NoteTreeNode({
-    required this.title,
-    required this.content,
-    List<NoteTreeNode>? children,
-  }) : children = children ?? [] {
-    for (var child in this.children) {
-      child.parent = this;
-    }
   }
 }
