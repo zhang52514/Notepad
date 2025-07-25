@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
@@ -7,6 +8,9 @@ mixin WebRTCStatsMixin {
   void log(String message);
 
   Timer? _statsTimer;
+
+  // 缓存上次的 bytesSent & timestamp，用于计算带宽
+  final Map<String, _StatCache> _caches = {};
 
   void startStats({Duration interval = const Duration(seconds: 5)}) {
     _statsTimer?.cancel();
@@ -17,100 +21,114 @@ mixin WebRTCStatsMixin {
           final reports = await peerConnection!.getStats();
           _reportKeyMetrics(reports);
         } catch (e) {
-          log("获取Stats失败: $e");
+          log("获取 Stats 失败: $e");
           stopStats();
         }
       } else {
         stopStats();
       }
     });
-    log("已启动 Stats 收集，每 ${interval.inSeconds}s 一次");
+    log("✅ 已启动 Stats 收集，每 ${interval.inSeconds}s 一次");
   }
 
   void stopStats() {
     _statsTimer?.cancel();
     _statsTimer = null;
-    log("已停止 Stats 收集");
+    log("🛑 已停止 Stats 收集");
   }
 
   void _reportKeyMetrics(List<StatsReport> reports) {
-    String info = "[WebRTC Stats]";
-    int? bytesSent;
     int? packetsLost;
     double? rttSec;
     double? fps;
-    int? width;
-    int? height;
+    int? width, height;
+    int? bitrateBps;
 
     for (var r in reports) {
-      final Map<dynamic, dynamic> m = r.values;
+      final m = r.values;
       switch (r.type) {
         case 'outbound-rtp':
-          _computeBitrate(r);
+          // 只针对 video track 计算
+          if ((m['mediaType'] ?? m['kind']) == 'video') {
+            final cache = _caches.putIfAbsent(r.id, () => _StatCache());
+            bitrateBps = cache.computeBitrate(r);
+          }
           break;
         case 'inbound-rtp':
-          final rawLost = m['packetsLost'];
-          packetsLost =
-              rawLost is String
-                  ? int.tryParse(rawLost)
-                  : (rawLost is num ? rawLost.toInt() : null);
+          if ((m['mediaType'] ?? m['kind']) == 'video') {
+            final rawLost = m['packetsLost'];
+            packetsLost =
+                rawLost is num ? rawLost.toInt() : int.tryParse(rawLost ?? '');
+          }
           break;
         case 'candidate-pair':
           if (m['state'] == 'succeeded') {
             final rawRtt = m['currentRoundTripTime'];
             rttSec =
-                rawRtt is String
-                    ? double.tryParse(rawRtt)
-                    : (rawRtt is num ? rawRtt.toDouble() : null);
+                rawRtt is num
+                    ? rawRtt.toDouble()
+                    : double.tryParse(rawRtt ?? '');
           }
           break;
         case 'track':
           if (m['kind'] == 'video') {
             final rawFps = m['framesPerSecond'];
             fps =
-                rawFps is String
-                    ? double.tryParse(rawFps)
-                    : (rawFps is num ? rawFps.toDouble() : null);
+                rawFps is num
+                    ? rawFps.toDouble()
+                    : double.tryParse(rawFps ?? '');
             final rawW = m['frameWidth'], rawH = m['frameHeight'];
-            width =
-                rawW is String
-                    ? int.tryParse(rawW)
-                    : (rawW is num ? rawW.toInt() : null);
-            height =
-                rawH is String
-                    ? int.tryParse(rawH)
-                    : (rawH is num ? rawH.toInt() : null);
+            width = rawW is num ? rawW.toInt() : int.tryParse(rawW ?? '');
+            height = rawH is num ? rawH.toInt() : int.tryParse(rawH ?? '');
           }
           break;
       }
     }
 
-    // 拼接丢包、RTT、FPS、分辨率
-    if (packetsLost != null) info += " | Lost: $packetsLost";
-    if (rttSec != null)
-      info += " | RTT: ${(rttSec * 1000).toStringAsFixed(0)} ms";
-    if (fps != null) info += " | FPS: ${fps.toStringAsFixed(1)}";
-    if (width != null && height != null) {
-      info += " | Res: ${width}x$height";
-    }
+    // 构造结构化输出
 
-    log(info);
+    //bitrate_bps（比特率 bps）
+    //packets_lost（丢包数）
+    //rtt_ms（往返时延 毫秒）
+    //fps（帧率 FPS）
+    //resolution（分辨率）
+    //timestamp（时间戳）
+    final stats = {
+      'bitrate_bps': bitrateBps,
+      'packets_lost': packetsLost,
+      'rtt_ms': rttSec != null ? (rttSec * 1000).round() : null,
+      'fps': fps?.toStringAsFixed(1),
+      'resolution':
+          (width != null && height != null) ? '${width}x$height' : null,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    // 清理 null 字段，只输出实际数据
+    stats.removeWhere((_, v) => v == null);
+
+    log("WebRTC Stats → ${jsonEncode(stats)}");
   }
+}
 
-  int? _lastBytesSent;
-  double? _lastTimestamp;
-  void _computeBitrate(StatsReport r) {
-    final rawBytes = r.values['bytesSent'];
-    final bytes =
-        rawBytes is String ? int.parse(rawBytes) : (rawBytes as num).toInt();
-    final ts = r.timestamp; // ms
-    if (_lastBytesSent != null && _lastTimestamp != null) {
-      final deltaBytes = bytes - _lastBytesSent!;
-      final deltaSecs = (ts - _lastTimestamp!) / 1000.0;
-      final bps = deltaSecs > 0 ? (deltaBytes * 8 / deltaSecs).round() : 0;
-      log(">>> 实时带宽: $bps bps");
+/// 用于缓存上次 bytesSent 和 timestamp，并计算带宽
+class _StatCache {
+  int? _lastBytes;
+  double? _lastTs;
+
+  int? computeBitrate(StatsReport report) {
+    final raw = report.values['bytesSent'];
+    final bytes = raw is num ? raw.toInt() : int.tryParse(raw ?? '');
+    final ts = report.timestamp; // ms
+    int? bps;
+    if (_lastBytes != null && _lastTs != null && bytes != null) {
+      final deltaB = bytes - _lastBytes!;
+      final deltaS = (ts - _lastTs!) / 1000.0;
+      if (deltaB > 0 && deltaS > 0) {
+        bps = (deltaB * 8 / deltaS).round();
+      }
     }
-    _lastBytesSent = bytes;
-    _lastTimestamp = ts;
+    _lastBytes = bytes;
+    _lastTs = ts;
+    return bps;
   }
 }

@@ -50,7 +50,7 @@ class ChatController extends ChangeNotifier
               return; // WebRTC 信令不作为普通聊天消息显示
             }
             // 普通聊天消息
-            addMessage(message, scrollToBottom, authController.currentUser!.id);
+            addMessage(message, authController.currentUser!.id);
           } else if (raw['cmd'] == Cmd.http.name) {
             // 处理 HTTP 请求返回的数据
             if (raw['path'] == HttpPath.getUsers.name) {
@@ -70,286 +70,480 @@ class ChatController extends ChangeNotifier
     });
   }
 
-
-  
   // 添加缓存未处理Offer的Map
   final Map<String, Map<String, dynamic>> _pendingOffers = {};
 
-  /// 处理所有 WebRTC 相关的信令消息
+  /// 处理所有 WebRTC 相关的信令消息 - 优化版本
   void _handleRtcSignalingMessage(ChatMessage msg) {
-    // 如果是自己发送的信令（防止自发自收）
+    // 防止自发自收
     if (msg.senderId == authController.currentUser?.id) {
-      // 可以在这里处理自己发送信令后的UI反馈，例如等待对方接听等
       return;
     }
 
-    _currentCallPeerId = msg.senderId; // 记录当前通话的对方ID
+    _currentCallPeerId = msg.senderId;
+    _log("收到WebRTC信令", "类型: ${msg.type}, 发送者: ${msg.senderId}");
 
-    /// 处理信令消息
     switch (msg.type) {
       case MessageType.videoCall:
-        // 收到视频通话请求 (被叫方)
-        DialogUtil.showGlobalDialog(_buildIncomingCallDialog(msg));
+        _handleIncomingCall(msg);
         break;
       case MessageType.videoAnswer:
-        // 对方已接听 (主叫方收到)
-        // 如果当前通话页面已存在，不需要重复导航
-        if (!rtcCallController.inCalling) {
-          // 重新初始化或处理异常
-        }
+        _handleCallAccepted(msg);
         break;
       case MessageType.videoReject:
-        // 对方拒绝通话 (主叫方收到)
-        AnoToast.showToast("对方已拒绝通话", type: ToastType.info);
-        rtcCallController.hangUp();
+        _handleCallRejected(msg);
         break;
       case MessageType.videoHangup:
-        // 对方已挂断 (双方都可能收到)
-        rtcCallController.hangUp(); // 本地挂断并清理资源
+        _handleCallHangup(msg);
         break;
       case MessageType.signal:
-        // WebRTC 信令 (SDP Offer/Answer, ICE Candidate)
-        if (msg.metadata.isNotEmpty) {
-          if (msg.metadata['type'] == 'offer') {
-            // 如果是Offer且当前不在通话中，先缓存
-            if (!rtcCallController.inCalling) {
-              _pendingOffers[msg.senderId] = msg.metadata;
-              return;
-            }
-          }
-          rtcCallController.handleSignal(msg.metadata, (signalData) {
-            // 当 RtcCallController 内部生成新的信令时，通过此回调发送给对方
-            _sendRtcSignalingMessage(
-              senderId: authController.currentUser!.id,
-              receiverId: msg.senderId, // 回复给信令的发送方
-              roomId: msg.roomId,
-              signalData: signalData,
-            );
-          });
-        }
+        _handleWebRTCSignal(msg);
         break;
       default:
-        // 其他消息类型不处理
-        break;
+        _log("未知信令类型", msg.type.toString());
     }
   }
 
-  /// 构建来电弹窗
+  /// 处理来电请求
+  void _handleIncomingCall(ChatMessage msg) {
+    // 如果已经在通话中，自动拒绝新来电
+    if (rtcCallController.inCalling) {
+      _log("已在通话中，自动拒绝来电", msg.senderId);
+      sendVideoReject(msg.senderId, msg.roomId);
+      return;
+    }
+
+    _log("收到来电请求", "来自: ${msg.senderId}");
+    DialogUtil.showGlobalDialog(_buildIncomingCallDialog(msg));
+  }
+
+  /// 处理通话被接受
+  void _handleCallAccepted(ChatMessage msg) {
+    _log("对方已接听", msg.senderId);
+    AnoToast.showToast("对方已接听", type: ToastType.success);
+
+    // 如果不在通话状态，可能是异常情况
+    if (!rtcCallController.inCalling) {
+      _log("警告: 收到接听信令但本地未在通话状态");
+    }
+  }
+
+  /// 处理通话被拒绝
+  void _handleCallRejected(ChatMessage msg) {
+    _log("对方拒绝通话", msg.senderId);
+    AnoToast.showToast("对方已拒绝通话", type: ToastType.info);
+    rtcCallController.hangUp();
+  }
+
+  /// 处理通话挂断
+  void _handleCallHangup(ChatMessage msg) {
+    _log("对方挂断通话", msg.senderId);
+    AnoToast.showToast("通话已结束", type: ToastType.info);
+    rtcCallController.hangUp();
+  }
+
+  /// 处理WebRTC信令数据
+  void _handleWebRTCSignal(ChatMessage msg) {
+    if (msg.metadata.isEmpty) {
+      _log("警告: WebRTC信令数据为空");
+      return;
+    }
+
+    final signalType = msg.metadata['type'] as String?;
+    _log("处理WebRTC信令", "类型: $signalType");
+
+    // 根据信令类型进行不同处理
+    switch (signalType) {
+      case 'offer':
+        _handleOffer(msg);
+        break;
+      case 'answer':
+        _handleAnswer(msg);
+        break;
+      case 'candidate':
+        _handleCandidate(msg);
+        break;
+      default:
+        _log("未知WebRTC信令类型", signalType ?? 'null');
+    }
+  }
+
+  /// 处理Offer信令
+  void _handleOffer(ChatMessage msg) {
+    // 如果尚未初始化通话，需要先准备被叫方状态
+    if (!rtcCallController.inCalling) {
+      _log("收到Offer但未在通话状态，可能是时序问题");
+      // 这里可以缓存Offer，等待用户接听后处理
+      _pendingOffers[msg.senderId] = msg.metadata;
+      return;
+    }
+
+    // 直接处理Offer
+    rtcCallController.handleSignal(msg.metadata, (signalData) {
+      _sendRtcSignalingMessage(
+        senderId: authController.currentUser!.id,
+        receiverId: msg.senderId,
+        roomId: msg.roomId,
+        signalData: signalData,
+      );
+    });
+  }
+
+  /// 处理Answer信令
+  void _handleAnswer(ChatMessage msg) {
+    if (!rtcCallController.inCalling) {
+      _log("警告: 收到Answer但未在通话状态");
+      return;
+    }
+
+    rtcCallController.handleSignal(msg.metadata, (signalData) {
+      _sendRtcSignalingMessage(
+        senderId: authController.currentUser!.id,
+        receiverId: msg.senderId,
+        roomId: msg.roomId,
+        signalData: signalData,
+      );
+    });
+  }
+
+  /// 处理ICE Candidate信令
+  void _handleCandidate(ChatMessage msg) {
+    // ICE候选可以在任何时候收到，但需要PeerConnection存在
+    rtcCallController.handleSignal(msg.metadata, (signalData) {
+      _sendRtcSignalingMessage(
+        senderId: authController.currentUser!.id,
+        receiverId: msg.senderId,
+        roomId: msg.roomId,
+        signalData: signalData,
+      );
+    });
+  }
+
+  /// 优化的来电弹窗
   Widget _buildIncomingCallDialog(ChatMessage msg) {
     return AlertDialog(
-      title: const Text("收到视频通话请求"),
-      content: Text("来自 ${msg.senderId} 的视频通话请求"),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.videocam, color: Colors.blue, size: 24),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            "视频通话邀请",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 40,
+            backgroundColor: Colors.grey[300],
+            child: Text(
+              msg.senderId[0].toUpperCase(),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "来自 ${msg.senderId} 的视频通话",
+            style: const TextStyle(fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "是否接听？",
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+        ],
+      ),
       actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(main.globalContext); // 关闭弹窗
-            sendVideoReject(msg.senderId, msg.roomId); // 发送拒绝信令
-            AnoToast.showToast("已拒绝通话", type: ToastType.info);
-          },
-          child: const Text("拒绝"),
-        ),
-        TextButton(
-          onPressed: () async {
-            Navigator.pop(main.globalContext); // 关闭弹窗
-            AnoToast.showToast("正在接听...", type: ToastType.info);
-
-            try {
-              // 作为被叫方初始化 WebRTC
-              await rtcCallController.initCall(
-                isOffer: false,
-                onSignalSend: (signalData) {
-                  _sendRtcSignalingMessage(
-                    senderId: authController.currentUser!.id,
-                    receiverId: msg.senderId,
-                    roomId: msg.roomId,
-                    signalData: signalData,
-                  );
-                },
-              );
-              final pendingOffer = _pendingOffers[msg.senderId];
-              if (pendingOffer != null) {
-                rtcCallController.handleOffer(pendingOffer, (signalData) {
-                  _sendRtcSignalingMessage(
-                    senderId: authController.currentUser!.id,
-                    receiverId: msg.senderId,
-                    roomId: msg.roomId,
-                    signalData: signalData,
-                  );
-                });
-                _pendingOffers.remove(msg.senderId);
-              }
-
-              // 导航到视频通话页面，并传入必要的参数
-              main.navigatorKey.currentState?.push(
-                MaterialPageRoute(
-                  builder:
-                      (_) => VideoCallPage(
-                        isCaller: false, // 被叫方
-                        callTargetId: msg.senderId, // 呼叫方ID
-                      ),
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: const BorderSide(color: Colors.red),
+                  ),
                 ),
-              );
-
-              // 接听成功后，向对方发送接听信令
-              sendVideoAnswer(msg.senderId, msg.roomId);
-            } catch (e) {
-              AnoToast.showToast(
-                "接听失败: ${e.toString()}",
-                type: ToastType.error,
-              );
-              rtcCallController.hangUp(); // 确保清理资源
-            }
-          },
-          child: const Text("接听"),
+                onPressed: () {
+                  Navigator.pop(main.globalContext);
+                  sendVideoReject(msg.senderId, msg.roomId);
+                  AnoToast.showToast("已拒绝通话", type: ToastType.info);
+                },
+                child: const Text("拒绝", style: TextStyle(color: Colors.red)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () => _acceptIncomingCall(msg),
+                child: const Text("接听", style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  /// 发送视频通话呼叫请求 (主叫方)
+  /// 接听来电的优化处理
+  Future<void> _acceptIncomingCall(ChatMessage msg) async {
+    Navigator.pop(main.globalContext);
+
+    try {
+      AnoToast.showToast("正在接听...", type: ToastType.info);
+
+      // 初始化被叫方WebRTC
+      await rtcCallController.initCall(
+        isOffer: false,
+        onSignalSend: (signalData) {
+          _sendRtcSignalingMessage(
+            senderId: authController.currentUser!.id,
+            receiverId: msg.senderId,
+            roomId: msg.roomId,
+            signalData: signalData,
+          );
+        },
+      );
+
+      // 处理缓存的Offer
+      final pendingOffer = _pendingOffers.remove(msg.senderId);
+      if (pendingOffer != null) {
+        _log("处理缓存的Offer");
+        rtcCallController.handleSignal(pendingOffer, (signalData) {
+          _sendRtcSignalingMessage(
+            senderId: authController.currentUser!.id,
+            receiverId: msg.senderId,
+            roomId: msg.roomId,
+            signalData: signalData,
+          );
+        });
+      }
+
+      // 导航到通话页面
+      main.navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder:
+              (_) => VideoCallPage(isCaller: false, callTargetId: msg.senderId),
+        ),
+      );
+
+      // 发送接听确认
+      sendVideoAnswer(msg.senderId, msg.roomId);
+    } catch (e) {
+      _log("接听失败", e.toString());
+      AnoToast.showToast("接听失败: ${e.toString()}", type: ToastType.error);
+      rtcCallController.hangUp();
+    }
+  }
+
+  /// 优化的发起通话方法
   void sendVideoCallRequest() {
     final currentUser = authController.currentUser;
-    final targetId = determineReceiverId(currentUser!.id); // 确定呼叫目标ID
+    if (currentUser == null) {
+      _log("错误: 用户未登录");
+      return;
+    }
 
-    // 1. 发送 'videoCall' 消息给对方，告知其有来电
-    final callMessage = ChatMessage(
-      messageId: DateTime.now().millisecondsSinceEpoch.toString(),
-      senderId: currentUser.id,
-      receiverId: targetId,
-      roomId: chatRoom?.roomId,
-      type: MessageType.videoCall,
-      status: MessageStatus.sent,
-      content: '发起视频通话',
-      timestamp: DateTime.now(),
-      attachments: [],
-      metadata: {},
-      read: [],
-    );
-    sendMessage(callMessage);
-    AnoToast.showToast("已发起视频通话请求...", type: ToastType.info);
+    // 检查当前是否已在通话中
+    if (rtcCallController.inCalling) {
+      AnoToast.showToast("当前已在通话中", type: ToastType.warning);
+      return;
+    }
 
-    _currentCallPeerId = targetId; // 记录当前通话的对方ID
+    final targetId = determineReceiverId(currentUser.id);
+    if (targetId.isEmpty) {
+      _log("错误: 无法确定通话目标");
+      AnoToast.showToast("无法发起通话", type: ToastType.error);
+      return;
+    }
 
-    // 2. 作为主叫方初始化 WebRTC
-    rtcCallController
-        .initCall(
-          isOffer: true,
-          onSignalSend: (signalData) {
-            // 当 RtcCallController 内部生成新的信令时，通过此回调发送给对方
-            _sendRtcSignalingMessage(
-              senderId: currentUser.id,
-              receiverId: targetId,
-              roomId: chatRoom.roomId,
-              signalData: signalData,
+    _log("发起视频通话", "目标: $targetId");
+
+    try {
+      // 1. 发送通话请求信令
+      final callMessage = ChatMessage(
+        messageId: DateTime.now().millisecondsSinceEpoch.toString(),
+        senderId: currentUser.id,
+        receiverId: targetId,
+        roomId: chatRoom?.roomId,
+        type: MessageType.videoCall,
+        status: MessageStatus.sent,
+        content: '发起视频通话',
+        timestamp: DateTime.now(),
+        attachments: [],
+        metadata: {},
+        read: [],
+      );
+
+      sendMessage(callMessage);
+      _currentCallPeerId = targetId;
+
+      // 2. 初始化主叫方WebRTC
+      rtcCallController
+          .initCall(
+            isOffer: true,
+            onSignalSend: (signalData) {
+              _sendRtcSignalingMessage(
+                senderId: currentUser.id,
+                receiverId: targetId,
+                roomId: chatRoom!.roomId,
+                signalData: signalData,
+              );
+            },
+          )
+          .then((_) {
+            // 3. 导航到通话页面
+            main.navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder:
+                    (_) =>
+                        VideoCallPage(isCaller: true, callTargetId: targetId),
+              ),
             );
-          },
-        )
-        .then((_) {
-          // 3. 初始化成功后，导航到视频通话页面
-          main.navigatorKey.currentState?.push(
-            MaterialPageRoute(
-              builder:
-                  (_) => VideoCallPage(
-                    isCaller: true, // 主叫方
-                    callTargetId: targetId, // 呼叫目标ID
-                  ),
-            ),
-          );
-        })
-        .catchError((e) {
-          AnoToast.showToast(
-            "视频通话初始化失败: ${e.toString()}",
-            type: ToastType.error,
-          );
-          rtcCallController.hangUp(); // 确保清理资源
-        });
+
+            AnoToast.showToast("正在呼叫...", type: ToastType.info);
+          })
+          .catchError((e) {
+            _log("通话初始化失败", e.toString());
+            AnoToast.showToast("通话初始化失败", type: ToastType.error);
+            rtcCallController.hangUp();
+          });
+    } catch (e) {
+      _log("发起通话异常", e.toString());
+      AnoToast.showToast("发起通话失败", type: ToastType.error);
+    }
   }
 
-  /// 发送视频通话拒绝信令
-  void sendVideoReject(String receiverId, String roomId) {
-    final currentUser = authController.currentUser;
-    if (currentUser == null) return;
-
-    final message = ChatMessage(
-      messageId: DateTime.now().millisecondsSinceEpoch.toString(),
-      senderId: currentUser.id,
-      receiverId: receiverId,
-      roomId: roomId,
-      type: MessageType.videoReject, // 视频通话拒绝类型
-      status: MessageStatus.sent,
-      content: '视频通话已拒绝',
-      timestamp: DateTime.now(),
-      attachments: [],
-      metadata: {},
-      read: [],
-    );
-    sendMessage(message);
-    rtcCallController.hangUp(); // 挂断本地通话
-  }
-
-  /// 发送视频通话接听信令
-  void sendVideoAnswer(String receiverId, String roomId) {
-    final currentUser = authController.currentUser;
-    if (currentUser == null) return;
-
-    final message = ChatMessage(
-      messageId: DateTime.now().millisecondsSinceEpoch.toString(),
-      senderId: currentUser.id,
-      receiverId: receiverId,
-      roomId: roomId,
-      type: MessageType.videoAnswer, // 视频通话接听类型
-      status: MessageStatus.sent,
-      content: '视频通话已接听',
-      timestamp: DateTime.now(),
-      attachments: [],
-      metadata: {},
-      read: [],
-    );
-    sendMessage(message);
-  }
-
-  /// 发送视频通话挂断信令
+  /// 优化的挂断方法
   void sendVideoHangup() {
     final currentUser = authController.currentUser;
     final targetId =
         _currentCallPeerId ??
-        determineReceiverId(currentUser!.id); // 优先使用当前通话对象
+        (currentUser != null ? determineReceiverId(currentUser.id) : '');
 
-    if (currentUser == null) {
-      // 如果没有正在进行的通话对象，可能不需要发送挂断信令，只清理本地状态
+    if (currentUser == null || targetId.isEmpty) {
+      _log("本地挂断", "无需发送信令");
       rtcCallController.hangUp();
-      AnoToast.showToast("已挂断本地通话", type: ToastType.info);
       return;
     }
 
-    final message = ChatMessage(
-      messageId: DateTime.now().millisecondsSinceEpoch.toString(),
-      senderId: currentUser.id,
-      receiverId: targetId,
-      roomId: chatRoom?.roomId,
-      type: MessageType.videoHangup, // 视频通话挂断类型
-      status: MessageStatus.sent,
-      content: '视频通话已挂断',
-      timestamp: DateTime.now(),
-      attachments: [],
-      metadata: {},
-      read: [],
-    );
-    sendMessage(message);
-    rtcCallController.hangUp(); // 挂断本地通话
-    AnoToast.showToast("已挂断通话", type: ToastType.info);
+    _log("发送挂断信令", "目标: $targetId");
+
+    try {
+      final message = ChatMessage(
+        messageId: DateTime.now().millisecondsSinceEpoch.toString(),
+        senderId: currentUser.id,
+        receiverId: targetId,
+        roomId: chatRoom?.roomId,
+        type: MessageType.videoHangup,
+        status: MessageStatus.sent,
+        content: '视频通话已挂断',
+        timestamp: DateTime.now(),
+        attachments: [],
+        metadata: {},
+        read: [],
+      );
+
+      sendMessage(message);
+      rtcCallController.hangUp();
+      AnoToast.showToast("通话已结束", type: ToastType.info);
+    } catch (e) {
+      _log("发送挂断信令失败", e.toString());
+      // 即使发送失败也要本地挂断
+      rtcCallController.hangUp();
+    } finally {
+      _currentCallPeerId = null;
+    }
   }
 
-  /// 内部辅助函数，用于发送 WebRTC 信令消息
+  /// 发送拒绝信令 - 优化版本
+  void sendVideoReject(String receiverId, String roomId) {
+    final currentUser = authController.currentUser;
+    if (currentUser == null) return;
+
+    _log("发送拒绝信令", "目标: $receiverId");
+
+    try {
+      final message = ChatMessage(
+        messageId: DateTime.now().millisecondsSinceEpoch.toString(),
+        senderId: currentUser.id,
+        receiverId: receiverId,
+        roomId: roomId,
+        type: MessageType.videoReject,
+        status: MessageStatus.sent,
+        content: '视频通话已拒绝',
+        timestamp: DateTime.now(),
+        attachments: [],
+        metadata: {},
+        read: [],
+      );
+
+      sendMessage(message);
+      rtcCallController.hangUp();
+    } catch (e) {
+      _log("发送拒绝信令失败", e.toString());
+      rtcCallController.hangUp();
+    }
+  }
+
+  /// 发送接听信令 - 优化版本
+  void sendVideoAnswer(String receiverId, String roomId) {
+    final currentUser = authController.currentUser;
+    if (currentUser == null) return;
+
+    _log("发送接听信令", "目标: $receiverId");
+
+    try {
+      final message = ChatMessage(
+        messageId: DateTime.now().millisecondsSinceEpoch.toString(),
+        senderId: currentUser.id,
+        receiverId: receiverId,
+        roomId: roomId,
+        type: MessageType.videoAnswer,
+        status: MessageStatus.sent,
+        content: '视频通话已接听',
+        timestamp: DateTime.now(),
+        attachments: [],
+        metadata: {},
+        read: [],
+      );
+
+      sendMessage(message);
+    } catch (e) {
+      _log("发送接听信令失败", e.toString());
+    }
+  }
+
+  /// 优化的WebRTC信令发送
   void _sendRtcSignalingMessage({
     required String senderId,
     required String receiverId,
     required String roomId,
     required Map<String, dynamic> signalData,
   }) {
-    sendMessage(
-      ChatMessage(
-        messageId: 'RTC_${DateTime.now().millisecondsSinceEpoch}', // 唯一ID
+    try {
+      final message = ChatMessage(
+        messageId: 'RTC_${DateTime.now().millisecondsSinceEpoch}',
         senderId: senderId,
         receiverId: receiverId,
         content: '',
@@ -358,10 +552,26 @@ class ChatController extends ChangeNotifier
         attachments: [],
         roomId: roomId,
         read: [],
-        metadata: signalData, // 实际的 WebRTC 信令
+        metadata: signalData,
         timestamp: DateTime.now(),
-      ),
-    );
+      );
+
+      sendMessage(message);
+
+      // 只记录关键信令类型，避免日志过多
+      final signalType = signalData['type'] as String?;
+      if (signalType == 'offer' || signalType == 'answer') {
+        _log("发送WebRTC信令", "类型: $signalType, 目标: $receiverId");
+      }
+    } catch (e) {
+      _log("发送WebRTC信令失败", e.toString());
+    }
+  }
+
+  /// 日志辅助方法
+  void _log(String message, [String? details]) {
+    final timestamp = DateTime.now().toIso8601String();
+    print('[ChatController][$timestamp] $message ${details ?? ''}');
   }
 
   /// 统一发送消息到 WebSocket
@@ -398,15 +608,15 @@ class ChatController extends ChangeNotifier
 
   ///
   /// 滚动到底部
-  void scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      listViewController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    });
-  }
+  // void scrollToBottom() {
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     listViewController.animateTo(
+  //       0,
+  //       duration: const Duration(milliseconds: 300),
+  //       curve: Curves.easeOut,
+  //     );
+  //   });
+  // }
 
   ///是否滚动
   bool _isScrolling = false;

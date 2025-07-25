@@ -58,7 +58,6 @@ mixin MessageMixin on ChangeNotifier, RoomMixin {
       // 2. 获取最后一条消息
       final lastMessage = messages.isNotEmpty ? messages.last : null;
 
-      
       // 3. 在会话列表中查找对应 ChatRoom
       final idx = chatroomList.indexWhere((r) => r.roomId == roomId);
       if (idx != -1) {
@@ -73,21 +72,12 @@ mixin MessageMixin on ChangeNotifier, RoomMixin {
   // 添加一条新消息到指定房间
   void addMessage(
     ChatMessage message,
-    VoidCallback scrollToBottom,
     String uid,
   ) {
-    String roomId = getCurrentRoomId();
-    if (!_roomMessages.containsKey(roomId)) {
-      _roomMessages[roomId] = []; // 如果房间不存在，则创建一个新的消息列表
-    }
     // 添加消息
-    _roomMessages[roomId]!.add(message);
+    _roomMessages[message.roomId]!.add(message);
 
     refreshConversationSummaries(uid);
-
-    if (_roomMessages[roomId]!.length > 4) {
-      scrollToBottom();
-    }
 
     notifyListeners();
   }

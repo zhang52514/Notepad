@@ -7,6 +7,7 @@ import 'package:hugeicons/hugeicons.dart';
 
 import 'package:notepad/common/domain/ChatMessage.dart';
 import 'package:notepad/common/domain/ChatRoom.dart';
+import 'package:notepad/common/module/NoDataPage.dart';
 import 'package:notepad/common/utils/themeUtil.dart';
 import 'package:notepad/common/utils/DateUtil.dart';
 import 'package:notepad/controller/ChatController.dart';
@@ -14,7 +15,6 @@ import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/ChatMessageBubb
 import 'package:notepad/views/chat/ChatMessage/ChatMessageWidget/MessagePayload.dart';
 import 'package:notepad/views/chat/Components/ChatInputBar/ChatInputBar.dart';
 import 'package:notepad/views/chat/Components/PageStatus/WelcomePage.dart';
-import 'package:notepad/views/chat/Components/PageStatus/NoDataPage.dart';
 
 /// 显示消息项的数据结构
 /// 包含 ChatMessage 或 时间标签 (String)，以及消息原始索引（仅 ChatMessage 有效）
@@ -166,7 +166,10 @@ class _ChatDetailState extends State<ChatDetail> {
         children: [
           // 消息为空时显示暂无数据页面
           displayItems.isEmpty
-              ? const NoDataPage()
+              ? const NoDataPage(
+                title: "这里还没有消息哦",
+                subTitle: "快来发送第一条消息，开启新的对话吧！",
+              )
               : FlutterListView(
                 reverse: true,
                 controller: ctl.listViewController,
@@ -231,15 +234,11 @@ class _ChatDetailState extends State<ChatDetail> {
                   );
                 }, childCount: displayItems.length),
               ),
-
-          
         ],
       ),
       bottomNavigationBar: ChatInputBar(chatController: ctl),
     );
   }
-
-
 
   /// 滚动可见区域变化处理（节流控制，避免频繁触发）
   void _onVisibleItemChanged() {
